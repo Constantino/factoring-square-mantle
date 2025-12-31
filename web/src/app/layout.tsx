@@ -34,8 +34,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
           <PrivyProvider
-              appId="cmjt7jvix01lujx0d8ykuuvpp"
-              clientId="client-WY6UHDQE5B2UQiPeskwV7mXv3zR7stVZrGotijXRLP4NR"
+              appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
+              clientId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
               config={privyConfig}
           >
             {children}
