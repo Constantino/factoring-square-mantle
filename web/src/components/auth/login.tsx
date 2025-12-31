@@ -1,14 +1,14 @@
-import {useLogin, usePrivy} from '@privy-io/react-auth';
-import {useRouter} from 'next/navigation';
-import {useState} from 'react';
+import { useLogin, usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function Login() {
-    const {ready, authenticated} = usePrivy();
+    const { ready, authenticated, logout } = usePrivy();
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
 
-    const {login} = useLogin({
-        onComplete: ({user, isNewUser, loginMethod}) => {
+    const { login } = useLogin({
+        onComplete: ({ user, isNewUser, loginMethod }) => {
             console.log('User logged in successfully', user);
             console.log('Is new user:', isNewUser);
             console.log('Login method:', loginMethod);
@@ -27,15 +27,29 @@ export default function Login() {
         login();
     };
 
+    const handleLogout = () => {
+        setError(null);
+        logout();
+    };
+
     return (
         <div className="flex flex-col items-center gap-2">
-            <button
-                disabled={disableLogin}
-                onClick={handleLogin}
-                className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 min-w-3xs"
-            >
-                Log in
-            </button>
+            {authenticated ? (
+                <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 bg-red-500 text-white rounded min-w-3xs"
+                >
+                    Log out
+                </button>
+            ) : (
+                <button
+                    disabled={disableLogin}
+                    onClick={handleLogin}
+                    className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50 min-w-3xs"
+                >
+                    Log in
+                </button>
+            )}
             {error && (
                 <p className="text-red-500 text-sm">{error}</p>
             )}
