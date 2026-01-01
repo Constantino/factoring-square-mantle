@@ -1,17 +1,26 @@
 import { useLogin, usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useUserStore } from '@/stores/userStore';
 
 export default function Login() {
-    const { ready, authenticated, logout } = usePrivy();
+    const { ready, authenticated, logout: privyLogout } = usePrivy();
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
+    const { login: setLoggedIn, logout: setLoggedOut } = useUserStore();
 
     const { login } = useLogin({
         onComplete: ({ user, isNewUser, loginMethod }) => {
             console.log('User logged in successfully', user);
             console.log('Is new user:', isNewUser);
             console.log('Login method:', loginMethod);
+            
+            // Update Zustand store
+            setLoggedIn({ 
+                id: user.id,
+                email: user.email?.address
+            });
+            
             router.push('/users');
         },
         onError: (error) => {
@@ -29,7 +38,9 @@ export default function Login() {
 
     const handleLogout = () => {
         setError(null);
-        logout();
+        setLoggedOut();
+        privyLogout();
+        router.push('/');
     };
 
     return (
