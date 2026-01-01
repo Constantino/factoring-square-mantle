@@ -3,6 +3,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import {PrivyClientConfig, PrivyProvider} from '@privy-io/react-auth';
+import Navbar from "@/components/navbar";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -38,6 +39,7 @@ export default function RootLayout({
                     clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || ""}
                     config={privyConfig}
                 >
+                    <Navbar />
                     {children}
                 </PrivyProvider>
             </body>
