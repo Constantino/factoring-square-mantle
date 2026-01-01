@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const SIDEBAR_WIDTH = "10.24rem"
-const SIDEBAR_WIDTH_ICON = "1.92rem"
+const SIDEBAR_WIDTH_ICON = "3.5rem"
 
 type SidebarContext = {
   state: "expanded" | "collapsed"
