@@ -6,12 +6,12 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Users, LogOut } from "lucide-react"
+import { Users, LogOut, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/stores/userStore"
@@ -38,13 +38,7 @@ export function AppSidebar() {
     ]
 
     return (
-        <Sidebar side="left" variant="sidebar">
-            <SidebarHeader>
-                <div className="px-2 py-2">
-                    <h2 className="text-lg font-semibold">Factoring Square</h2>
-                </div>
-            </SidebarHeader>
-      
+        <Sidebar side="left" variant="sidebar" collapsible="icon" className="pt-16 relative">
             <SidebarContent>
                 <SidebarGroup>
                     <SidebarGroupContent>
@@ -75,6 +69,13 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>
+            
+            {/* Collapse trigger button */}
+            <div className="absolute top-1/2 -translate-y-1/2 -right-3 z-50">
+                <SidebarTrigger className="h-6 w-6 flex items-center justify-center bg-background hover:bg-accent text-foreground rounded-full border border-border shadow-md">
+                    <ChevronLeft className="h-4 w-4" />
+                </SidebarTrigger>
+            </div>
         </Sidebar>
     )
 }

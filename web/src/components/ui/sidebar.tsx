@@ -157,7 +157,7 @@ const Sidebar = React.forwardRef<
             <>
                 <div
                     className={cn(
-                        "group peer hidden md:block",
+                        "group peer hidden md:block overflow-visible",
                         state === "collapsed" ? "w-[--sidebar-width-icon]" : "w-[--sidebar-width]",
                         "transition-all duration-300 ease-in-out",
                         className
@@ -165,7 +165,7 @@ const Sidebar = React.forwardRef<
                 >
                     <div
                         ref={ref}
-                        className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground"
+                        className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground overflow-visible"
                         {...props}
                     >
                         {children}
