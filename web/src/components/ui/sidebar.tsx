@@ -7,8 +7,8 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH = "10.24rem"
+const SIDEBAR_WIDTH_ICON = "1.92rem"
 
 type SidebarContext = {
   state: "expanded" | "collapsed"
@@ -142,7 +142,7 @@ const Sidebar = React.forwardRef<
             return (
                 <div
                     className={cn(
-                        "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+                        "flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar text-sidebar-foreground",
                         className
                     )}
                     ref={ref}
@@ -158,7 +158,7 @@ const Sidebar = React.forwardRef<
                 <div
                     className={cn(
                         "group peer hidden md:block overflow-visible",
-                        state === "collapsed" ? "w-[--sidebar-width-icon]" : "w-[--sidebar-width]",
+                        state === "collapsed" ? "w-[var(--sidebar-width-icon)]" : "w-[var(--sidebar-width)]",
                         "transition-all duration-300 ease-in-out",
                         className
                     )}
