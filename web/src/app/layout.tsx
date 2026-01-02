@@ -3,6 +3,12 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import {PrivyClientConfig, PrivyProvider} from '@privy-io/react-auth';
+import Navbar from "@/components/navbar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useUserStore } from "@/stores/userStore";
+import { usePrivy } from "@privy-io/react-auth";
+import { useEffect } from "react";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -23,6 +29,46 @@ const privyConfig: PrivyClientConfig = {
     }
 }
 
+function LayoutContent({ children }: { children: React.ReactNode }) {
+    const { isLoggedIn, login, logout } = useUserStore();
+    const { ready, authenticated, user } = usePrivy();
+
+    // Sync Privy authentication state with userStore
+    useEffect(() => {
+        if (!ready) return;
+
+        if (authenticated && !isLoggedIn && user) {
+            // User is authenticated in Privy but not in our store
+            login({
+                id: user.id,
+                email: user.email?.address,
+            });
+        } else if (!authenticated && isLoggedIn) {
+            // User is logged out in Privy but still logged in our store
+            logout();
+        }
+    }, [ready, authenticated, isLoggedIn, user, login, logout]);
+
+    if (!isLoggedIn) {
+        return (
+            <>
+                <Navbar />
+                {children}
+            </>
+        );
+    }
+
+    return (
+        <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+                <Navbar />
+                {children}
+            </SidebarInset>
+        </SidebarProvider>
+    );
+}
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -38,7 +84,7 @@ export default function RootLayout({
                     clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || ""}
                     config={privyConfig}
                 >
-                    {children}
+                    <LayoutContent>{children}</LayoutContent>
                 </PrivyProvider>
             </body>
         </html>
