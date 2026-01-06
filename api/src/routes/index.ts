@@ -1,10 +1,14 @@
 import express, { Router } from 'express';
-import * as exampleController from '../controllers/exampleController';
+import exampleRoutes from './exampleRoutes';
+import loanRequestRoutes from './loanRequestRoutes';
 
 const router: Router = express.Router();
 
-router.get('/', exampleController.getExample);
-router.post('/', exampleController.postExample);
+// Example routes
+router.use('/', exampleRoutes);
+
+// Loan request routes
+router.use('/loan-requests', loanRequestRoutes);
 
 export default router;
 
