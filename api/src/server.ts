@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { Application } from 'express';
+import cors from 'cors';
 import { PORT } from './config/constants';
 import { testConnection } from './config/database';
 import routes from './routes';
@@ -8,6 +9,10 @@ import { errorHandler } from './middleware/errorHandler';
 const app: Application = express();
 
 // Middleware
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+}));
 app.use(express.json());
 
 // Routes
