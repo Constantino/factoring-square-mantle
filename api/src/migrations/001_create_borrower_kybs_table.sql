@@ -1,5 +1,5 @@
 -- Create BorrowerKYBs table
-CREATE TABLE IF NOT EXISTS BorrowerKYBs (
+CREATE TABLE IF NOT EXISTS "BorrowerKYBs" (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     modified_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -13,10 +13,10 @@ CREATE TABLE IF NOT EXISTS BorrowerKYBs (
 );
 
 -- Create an index on created_at for better query performance
-CREATE INDEX IF NOT EXISTS idx_borrower_kybs_created_at ON BorrowerKYBs(created_at);
+CREATE INDEX IF NOT EXISTS idx_borrower_kybs_created_at ON "BorrowerKYBs"(created_at);
 
 -- Create an index on wallet_address for faster lookups
-CREATE INDEX IF NOT EXISTS idx_borrower_kybs_wallet_address ON BorrowerKYBs(wallet_address);
+CREATE INDEX IF NOT EXISTS idx_borrower_kybs_wallet_address ON "BorrowerKYBs"(wallet_address);
 
 -- Create a function to automatically update modified_at timestamp
 CREATE OR REPLACE FUNCTION update_modified_at_column()
@@ -29,7 +29,7 @@ $$ language 'plpgsql';
 
 -- Create a trigger to automatically update modified_at on row updates
 CREATE TRIGGER update_borrower_kybs_modified_at
-    BEFORE UPDATE ON BorrowerKYBs
+    BEFORE UPDATE ON "BorrowerKYBs"
     FOR EACH ROW
     EXECUTE FUNCTION update_modified_at_column();
 
