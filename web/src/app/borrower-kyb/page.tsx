@@ -27,7 +27,13 @@ export default function BorrowerKYBPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted:", formData);
+
+        const submissionData = {
+            ...formData,
+            walletAddress: walletAddress || null,
+        };
+
+        console.log("Form submitted:", submissionData);
         // TODO: Add API call to submit KYB data
     };
 
