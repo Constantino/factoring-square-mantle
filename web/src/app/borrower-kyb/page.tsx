@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,9 @@ export default function BorrowerKYBPage() {
         uboFullName: "",
         averageInvoiceAmount: "",
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -25,16 +29,72 @@ export default function BorrowerKYBPage() {
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
+        setSubmitError(null);
+        setSubmitSuccess(false);
 
-        const submissionData = {
-            ...formData,
-            walletAddress: walletAddress || null,
-        };
+        if (!walletAddress) {
+            setSubmitError("Please connect a wallet before submitting");
+            setIsSubmitting(false);
+            return;
+        }
 
-        console.log("Form submitted:", submissionData);
-        // TODO: Add API call to submit KYB data
+        try {
+            let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            if (!apiUrl) {
+                throw new Error("NEXT_PUBLIC_API_URL is not configured");
+            }
+
+            // Ensure the URL has a protocol
+            if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+                apiUrl = `http://${apiUrl}`;
+            }
+
+            // Remove trailing slash if present
+            apiUrl = apiUrl.replace(/\/$/, "");
+
+            // Transform camelCase to snake_case and convert types
+            const submissionData = {
+                legal_business_name: formData.legalBusinessName,
+                country_of_incorporation: formData.countryOfIncorporation,
+                business_registration_number: formData.businessRegistrationNumber,
+                business_description: formData.businessDescription,
+                UBO_full_name: formData.uboFullName,
+                average_invoice_amount: parseFloat(formData.averageInvoiceAmount),
+                wallet_address: walletAddress,
+            };
+
+            const response = await axios.post(`${apiUrl}/borrower-kybs`, submissionData);
+
+            setSubmitSuccess(true);
+            console.log("KYB submitted successfully:", response.data);
+
+            // Reset form after successful submission
+            setFormData({
+                legalBusinessName: "",
+                countryOfIncorporation: "",
+                businessRegistrationNumber: "",
+                businessDescription: "",
+                uboFullName: "",
+                averageInvoiceAmount: "",
+            });
+        } catch (error) {
+            console.error("Error submitting KYB:", error);
+            if (axios.isAxiosError(error)) {
+                setSubmitError(
+                    error.response?.data?.error ||
+                    error.response?.data?.message ||
+                    error.message ||
+                    "Failed to submit KYB information"
+                );
+            } else {
+                setSubmitError("An unexpected error occurred");
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -175,10 +235,26 @@ export default function BorrowerKYBPage() {
                         )}
                     </div>
 
+                    {/* Error Message */}
+                    {submitError && (
+                        <div className="pt-2 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                            <p className="text-sm text-destructive">{submitError}</p>
+                        </div>
+                    )}
+
+                    {/* Success Message */}
+                    {submitSuccess && (
+                        <div className="pt-2 p-4 bg-green-500/10 border border-green-500/20 rounded-md">
+                            <p className="text-sm text-green-600 dark:text-green-400">
+                                KYB information submitted successfully!
+                            </p>
+                        </div>
+                    )}
+
                     {/* Submit Button */}
                     <div className="pt-4">
-                        <Button type="submit" className="w-full">
-                            Submit KYB Information
+                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                            {isSubmitting ? "Submitting..." : "Submit KYB Information"}
                         </Button>
                     </div>
                 </form>
