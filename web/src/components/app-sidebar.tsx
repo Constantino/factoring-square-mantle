@@ -12,7 +12,7 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, LogOut, ChevronLeft, ChevronRight, Building2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/stores/userStore"
@@ -36,6 +36,11 @@ export function AppSidebar() {
             title: "Users",
             url: "/users",
             icon: Users,
+        },
+        {
+            title: "Borrower KYB",
+            url: "/borrower-kyb",
+            icon: Building2,
         },
     ]
 
@@ -71,7 +76,7 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>
-            
+
             {/* Collapse trigger button */}
             <div className="absolute top-1/2 -translate-y-1/2 -right-3 z-50">
                 <SidebarTrigger className="h-6 w-6 flex items-center justify-center bg-background hover:bg-accent text-foreground rounded-full border border-border shadow-md">
