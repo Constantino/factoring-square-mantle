@@ -66,7 +66,7 @@ export default function BorrowerKYBPage() {
                 wallet_address: walletAddress,
             };
 
-            const response = await axios.post(`${apiUrl}/borrower-kybs`, submissionData);
+            const response = await axios.post(`${apiUrl}/borrowers/kybs`, submissionData);
 
             setSubmitSuccess(true);
             console.log("KYB submitted successfully:", response.data);

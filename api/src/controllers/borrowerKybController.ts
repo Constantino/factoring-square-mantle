@@ -1,31 +1,22 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
-
-interface BorrowerKYBRequestBody {
-    legal_business_name: string;
-    country_of_incorporation: string;
-    business_registration_number: string;
-    business_description: string;
-    UBO_full_name: string;
-    average_invoice_amount: number;
-    wallet_address: string;
-}
-
-interface BorrowerKYB {
-    id: number;
-    created_at: Date;
-    modified_at: Date;
-    legal_business_name: string;
-    country_of_incorporation: string;
-    business_registration_number: string;
-    business_description: string;
-    UBO_full_name: string;
-    average_invoice_amount: number;
-    wallet_address: string;
-}
+import { BorrowerKYB } from '../models/borrowerKyb';
+import {
+    validateLegalBusinessName,
+    validateCountryOfIncorporation,
+    validateBusinessRegistrationNumber,
+    validateBusinessDescription,
+    validateUBOFullName,
+    validateAverageInvoiceAmount,
+    validateWalletAddress,
+} from '../validators/borrowerKybValidators';
+import { sanitizeBorrowerKYBRequest } from '../utils/sanitize';
 
 export const createBorrowerKYB = async (req: Request, res: Response): Promise<void> => {
     try {
+        // Sanitize input data
+        const sanitizedData = sanitizeBorrowerKYBRequest(req.body);
+
         const {
             legal_business_name,
             country_of_incorporation,
@@ -34,55 +25,48 @@ export const createBorrowerKYB = async (req: Request, res: Response): Promise<vo
             UBO_full_name,
             average_invoice_amount,
             wallet_address,
-        }: BorrowerKYBRequestBody = req.body;
+        } = sanitizedData;
 
         // Validate required fields
-        if (!legal_business_name || typeof legal_business_name !== 'string' || legal_business_name.trim().length === 0) {
-            res.status(400).json({
-                error: 'legal_business_name is required and must be a non-empty string'
-            });
+        const legalBusinessNameError = validateLegalBusinessName(legal_business_name);
+        if (legalBusinessNameError) {
+            res.status(400).json({ error: legalBusinessNameError });
             return;
         }
 
-        if (!country_of_incorporation || typeof country_of_incorporation !== 'string' || country_of_incorporation.trim().length === 0) {
-            res.status(400).json({
-                error: 'country_of_incorporation is required and must be a non-empty string'
-            });
+        const countryOfIncorporationError = validateCountryOfIncorporation(country_of_incorporation);
+        if (countryOfIncorporationError) {
+            res.status(400).json({ error: countryOfIncorporationError });
             return;
         }
 
-        if (!business_registration_number || typeof business_registration_number !== 'string' || business_registration_number.trim().length === 0) {
-            res.status(400).json({
-                error: 'business_registration_number is required and must be a non-empty string'
-            });
+        const businessRegistrationNumberError = validateBusinessRegistrationNumber(business_registration_number);
+        if (businessRegistrationNumberError) {
+            res.status(400).json({ error: businessRegistrationNumberError });
             return;
         }
 
-        if (!business_description || typeof business_description !== 'string' || business_description.trim().length === 0) {
-            res.status(400).json({
-                error: 'business_description is required and must be a non-empty string'
-            });
+        const businessDescriptionError = validateBusinessDescription(business_description);
+        if (businessDescriptionError) {
+            res.status(400).json({ error: businessDescriptionError });
             return;
         }
 
-        if (!UBO_full_name || typeof UBO_full_name !== 'string' || UBO_full_name.trim().length === 0) {
-            res.status(400).json({
-                error: 'UBO_full_name is required and must be a non-empty string'
-            });
+        const uboFullNameError = validateUBOFullName(UBO_full_name);
+        if (uboFullNameError) {
+            res.status(400).json({ error: uboFullNameError });
             return;
         }
 
-        if (average_invoice_amount === undefined || average_invoice_amount === null || typeof average_invoice_amount !== 'number' || average_invoice_amount < 0) {
-            res.status(400).json({
-                error: 'average_invoice_amount is required and must be a non-negative number'
-            });
+        const averageInvoiceAmountError = validateAverageInvoiceAmount(average_invoice_amount);
+        if (averageInvoiceAmountError) {
+            res.status(400).json({ error: averageInvoiceAmountError });
             return;
         }
 
-        if (!wallet_address || typeof wallet_address !== 'string' || wallet_address.trim().length === 0) {
-            res.status(400).json({
-                error: 'wallet_address is required and must be a non-empty string'
-            });
+        const walletAddressError = validateWalletAddress(wallet_address);
+        if (walletAddressError) {
+            res.status(400).json({ error: walletAddressError });
             return;
         }
 
@@ -114,13 +98,13 @@ export const createBorrowerKYB = async (req: Request, res: Response): Promise<vo
         `;
 
         const result = await pool.query<BorrowerKYB>(query, [
-            legal_business_name.trim(),
-            country_of_incorporation.trim(),
-            business_registration_number.trim(),
-            business_description.trim(),
-            UBO_full_name.trim(),
+            legal_business_name,
+            country_of_incorporation,
+            business_registration_number,
+            business_description,
+            UBO_full_name,
             average_invoice_amount,
-            wallet_address.trim(),
+            wallet_address,
         ]);
 
         const borrowerKYB = result.rows[0];

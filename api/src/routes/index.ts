@@ -12,7 +12,7 @@ router.use('/', exampleRoutes);
 router.use('/loan-requests', loanRequestRoutes);
 
 // Borrower KYB routes
-router.use('/borrower-kybs', borrowerKybRoutes);
+router.use('/borrowers/kybs', borrowerKybRoutes);
 
 export default router;
 
