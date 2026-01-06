@@ -7,7 +7,9 @@
         "build": "tsc",
         "start": "node dist/server.js",
         "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-        "type-check": "tsc --noEmit"
+        "type-check": "tsc --noEmit",
+        "migrate": "ts-node-dev --transpile-only src/migrations/run-migrations.ts",
+        "migrate:prod": "node dist/migrations/run-migrations.js"
     },
     "dependencies": {
         "dotenv": "^16.4.5",
