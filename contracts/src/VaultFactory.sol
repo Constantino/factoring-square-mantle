@@ -27,7 +27,7 @@ contract VaultFactory {
         string memory name = string(abi.encodePacked(invoiceName, "_", invoiceNumber, "_Vault"));
         string memory symbol = string(abi.encodePacked(invoiceName, "_", invoiceNumber));
 
-        Vault vault = new Vault(name, symbol, ASSET, borrower, maxCapacity, maturityDate);
+        Vault vault = new Vault(name, symbol, ASSET, borrower, maxCapacity, maturityDate, msg.sender);
 
         emit VaultCreated(address(vault), invoiceNumber, borrower);
         return address(vault);

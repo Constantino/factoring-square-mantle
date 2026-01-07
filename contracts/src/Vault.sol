@@ -27,8 +27,9 @@ contract Vault is ERC4626, Ownable {
         IERC20 asset_,
         address _borrower,
         uint256 _maxCapacity,
-        uint256 _maturityDate
-    ) ERC4626(asset_) ERC20(name, symbol) Ownable(msg.sender) {
+        uint256 _maturityDate,
+        address _owner
+    ) ERC4626(asset_) ERC20(name, symbol) Ownable(_owner) {
         BORROWER = _borrower;
         MAX_CAPACITY = _maxCapacity;
         MATURITY_DATE = _maturityDate;
