@@ -2,7 +2,7 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import {PrivyClientConfig, PrivyProvider} from '@privy-io/react-auth';
+import { PrivyClientConfig, PrivyProvider } from '@privy-io/react-auth';
 import Navbar from "@/components/navbar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -53,7 +53,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         return (
             <>
                 <Navbar />
-                {children}
+                <div className="pt-16">
+                    {children}
+                </div>
             </>
         );
     }
@@ -63,7 +65,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <AppSidebar />
             <SidebarInset>
                 <Navbar />
-                {children}
+                <div className="pt-16">
+                    {children}
+                </div>
             </SidebarInset>
         </SidebarProvider>
     );
@@ -72,7 +76,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 export default function RootLayout({
     children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
     return (
         <html lang="en">
