@@ -121,18 +121,25 @@ export const createVault = async (req: Request, res: Response): Promise<void> =>
         const vaultAddress = vaultCreatedEvent.args.vault;
         const vaultName = `${body.invoiceName}_${body.invoiceNumber}_Vault`;
         const vaultSymbol = `${body.invoiceName}_${body.invoiceNumber}`;
+        const explorerUrl = `https://sepolia.mantlescan.xyz/tx/${receipt.hash}`;
+        const vaultExplorerUrl = `https://sepolia.mantlescan.xyz/address/${vaultAddress}`;
+        const factoryExplorerUrl = `https://sepolia.mantlescan.xyz/address/${VAULT_FACTORY_ADDRESS}`;
         
         res.status(201).json({
             message: 'Vault deployed successfully',
             data: {
                 vaultAddress,
+                vaultExplorerUrl,
                 vaultName,
                 vaultSymbol,
+                factoryAddress: VAULT_FACTORY_ADDRESS,
+                factoryExplorerUrl,
                 invoiceNumber: body.invoiceNumber,
                 borrowerAddress: body.borrowerAddress,
                 maxCapacity: body.invoiceAmount,
                 maturityDate: body.maturityDate,
                 transactionHash: receipt.hash,
+                explorerUrl,
                 blockNumber: receipt.blockNumber
             }
         });
