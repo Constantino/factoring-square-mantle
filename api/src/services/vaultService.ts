@@ -21,7 +21,6 @@ export class VaultService {
 
     async createVault(vaultData: CreateVaultBody): Promise<DeployVaultResult> {
         try {
-            console.error("--> creating a vault")
             // Convert invoice amount to wei (assuming USDC with 6 decimals)
             const maxCapacity = ethers.parseUnits(vaultData.invoiceAmount.toString(), 6);
             
@@ -48,7 +47,6 @@ export class VaultService {
                 .find((parsedLog: any) => parsedLog && parsedLog.name === 'VaultCreated');
             
             if (!vaultCreatedEvent) {
-                console.error("--> Failed to extract vault address from transaction")
                 throw new Error('Failed to extract vault address from transaction');
             }
             
@@ -96,7 +94,6 @@ export class VaultService {
         maxCapacity: number;
         currentCapacity: number;
     }): Promise<void> {
-        console.error("---> saving the vault")
         const query = `
             INSERT INTO "Vaults" (
                 vault_address,

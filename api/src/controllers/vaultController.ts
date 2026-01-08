@@ -16,8 +16,6 @@ export const createVault = async (req: Request, res: Response): Promise<void> =>
 
         // Deploy vault using service
         const result = await vaultService.createVault(body);
-
-        console.error("---> vault created sucessfully")
         res.status(201).json({
             message: 'Vault deployed successfully',
             data: result
