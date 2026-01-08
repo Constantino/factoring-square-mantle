@@ -1,0 +1,34 @@
+export interface CreateVaultBody {
+    invoiceName: string;
+    invoiceNumber: string;
+    borrowerAddress: string;
+    invoiceAmount: number;
+    maturityDate: number;
+}
+
+export interface DeployVaultResult {
+    vaultAddress: string;
+    vaultExplorerUrl: string;
+    vaultName: string;
+    vaultSymbol: string;
+    factoryAddress: string;
+    factoryExplorerUrl: string;
+    invoiceNumber: string;
+    borrowerAddress: string;
+    maxCapacity: number;
+    maturityDate: number;
+    transactionHash: string;
+    explorerUrl: string;
+    blockNumber: number;
+}
+
+export interface Vault {
+    vault_id: number;
+    vault_address: string;
+    borrower_address: string;
+    vault_name: string;
+    max_capacity: string;
+    current_capacity: string;
+    created_at: Date;
+    modified_at: Date;
+}
