@@ -50,18 +50,28 @@ deploy:
 		--legacy \
 		2>&1 | tee deploy.log
 	@echo ""
-	@echo "Updating API .env file..."
+	@echo "Updating .env files..."
 	@FACTORY_ADDRESS=$$(grep "VaultFactory:" deploy.log | tail -1 | awk '{print $$2}'); \
 	TEST_VAULT=$$(grep "Test Vault:" deploy.log | tail -1 | awk '{print $$3}'); \
-	if [ -n "$$FACTORY_ADDRESS" ] && [ -f "../api/.env" ]; then \
-		if grep -q "VAULT_FACTORY_ADDRESS=" ../api/.env; then \
-			grep -v "VAULT_FACTORY_ADDRESS=" ../api/.env > ../api/.env.tmp && \
-			echo "VAULT_FACTORY_ADDRESS=$$FACTORY_ADDRESS" >> ../api/.env.tmp && \
-			mv ../api/.env.tmp ../api/.env; \
+	if [ -n "$$FACTORY_ADDRESS" ]; then \
+		if grep -q "VAULT_FACTORY_ADDRESS=" .env; then \
+			grep -v "VAULT_FACTORY_ADDRESS=" .env > .env.tmp && \
+			echo "VAULT_FACTORY_ADDRESS=$$FACTORY_ADDRESS" >> .env.tmp && \
+			mv .env.tmp .env; \
 		else \
-			echo "VAULT_FACTORY_ADDRESS=$$FACTORY_ADDRESS" >> ../api/.env; \
+			echo "VAULT_FACTORY_ADDRESS=$$FACTORY_ADDRESS" >> .env; \
 		fi; \
-		echo "✓ Updated ../api/.env with factory address: $$FACTORY_ADDRESS"; \
+		echo "✓ Updated .env with factory address: $$FACTORY_ADDRESS"; \
+		if [ -f "../api/.env" ]; then \
+			if grep -q "VAULT_FACTORY_ADDRESS=" ../api/.env; then \
+				grep -v "VAULT_FACTORY_ADDRESS=" ../api/.env > ../api/.env.tmp && \
+				echo "VAULT_FACTORY_ADDRESS=$$FACTORY_ADDRESS" >> ../api/.env.tmp && \
+				mv ../api/.env.tmp ../api/.env; \
+			else \
+				echo "VAULT_FACTORY_ADDRESS=$$FACTORY_ADDRESS" >> ../api/.env; \
+			fi; \
+			echo "✓ Updated ../api/.env with factory address: $$FACTORY_ADDRESS"; \
+		fi; \
 	fi
 	@echo ""
 	@echo "=========================================="
