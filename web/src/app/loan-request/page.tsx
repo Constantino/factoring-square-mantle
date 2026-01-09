@@ -137,7 +137,7 @@ export default function LoanRequestPage() {
             const invoiceAmountNum = parseFloat(formData.invoiceAmount) || 0;
             const advanceRate = 0.8;
             const monthlyInterestRate = 0.015;
-            const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate, 8000);
+            const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate);
 
             // Transform form data to API format
             const submissionData = {
