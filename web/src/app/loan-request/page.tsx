@@ -6,8 +6,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useWalletAddress } from "@/hooks/use-wallet-address";
 
 export default function LoanRequestPage() {
+    const { walletAddress, walletsReady, privyReady } = useWalletAddress();
     const [formData, setFormData] = useState({
         term: "",
         invoiceNumber: "",
@@ -355,6 +357,24 @@ export default function LoanRequestPage() {
                         </div>
                     </div>
 
+                    {/* Borrower Address Display */}
+                    <div className="pt-4 border-t border-border space-y-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Borrower Address
+                        </label>
+                        {walletAddress ? (
+                            <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground font-mono break-all">
+                                {walletAddress}
+                            </div>
+                        ) : (
+                            <div className="px-3 py-2 bg-muted rounded-md text-sm text-muted-foreground italic">
+                                {walletsReady && privyReady
+                                    ? "No wallet found. Please connect a wallet."
+                                    : "Loading wallet information..."}
+                            </div>
+                        )}
+                    </div>
+
                     {/* Error Message */}
                     {submitError && (
                         <div className="pt-2 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
@@ -373,7 +393,7 @@ export default function LoanRequestPage() {
 
                     {/* Submit Button */}
                     <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        <Button type="submit" className="w-full" disabled={isSubmitting || !walletAddress}>
                             {isSubmitting ? "Submitting..." : "Submit Loan Request"}
                         </Button>
                     </div>
