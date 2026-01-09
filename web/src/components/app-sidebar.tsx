@@ -12,7 +12,11 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
+<<<<<<< HEAD
 import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt } from "lucide-react"
+=======
+import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Vault } from "lucide-react"
+>>>>>>> main
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/stores/userStore"
@@ -43,9 +47,15 @@ export function AppSidebar() {
             icon: Building2,
         },
         {
+<<<<<<< HEAD
             title: "Request Loan",
             url: "/loan-request",
             icon: Receipt,
+=======
+            title: "Vaults",
+            url: "/vaults",
+            icon: Vault,
+>>>>>>> main
         },
     ]
 
