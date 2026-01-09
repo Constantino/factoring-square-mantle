@@ -1,0 +1,58 @@
+name: Deploy API to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "dist,package.json,package-lock.json"
+          target: "/home/ubuntu/api"
+          overwrite: true
+
+      - name: Deploy and restart
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/api
+            
+            # Create .env from GitHub secrets
+            cat > .env << EOF
+            PORT=${{ secrets.PORT }}
+            DATABASE_CONNECTION_STRING=${{ secrets.DATABASE_CONNECTION_STRING }}
+            RPC_URL=${{ secrets.RPC_URL }}
+            PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
+            VAULT_FACTORY_ADDRESS=${{ secrets.VAULT_FACTORY_ADDRESS }}
+            USDC_ADDRESS=${{ secrets.USDC_ADDRESS }}
+            EOF
+            
+            npm install --production
+            pm2 restart api || pm2 start npm --name "api" -- start
+            pm2 save
