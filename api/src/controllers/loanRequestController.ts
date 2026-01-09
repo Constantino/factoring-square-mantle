@@ -1,15 +1,21 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
-
-interface LoanRequestBody {
-    business_name: string;
-}
-
-interface LoanRequest {
-    id: number;
-    created_at: Date;
-    business_name: string;
-}
+import { LoanRequest } from '../models/loanRequest';
+import {
+    validateInvoiceNumber,
+    validateInvoiceAmount,
+    validateInvoiceDueDate,
+    validateTerm,
+    validateCustomerName,
+    validateDeliveryCompleted,
+    validateAdvanceRate,
+    validateMonthlyInterestRate,
+    validateMaxLoan,
+    validateNotPledged,
+    validateAssignmentSigned,
+    validateBorrowerAddress,
+} from '../validators/loanRequestValidators';
+import { sanitizeLoanRequestRequest } from '../utils/sanitize';
 
 export const getLoanRequestById = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -26,7 +32,22 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
 
         // Query database
         const query = `
-            SELECT id, created_at, business_name
+            SELECT 
+                id,
+                created_at,
+                modified_at,
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                term,
+                customer_name,
+                delivery_completed,
+                advance_rate,
+                monthly_interest_rate,
+                max_loan,
+                not_pledged,
+                assignment_signed,
+                borrower_address
             FROM "LoanRequests"
             WHERE id = $1
         `;
@@ -55,24 +76,149 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
 
 export const createLoanRequest = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { business_name }: LoanRequestBody = req.body;
+        // Sanitize input data
+        const sanitizedData = sanitizeLoanRequestRequest(req.body);
 
-        // Validate input
-        if (!business_name || typeof business_name !== 'string' || business_name.trim().length === 0) {
-            res.status(400).json({
-                error: 'business_name is required and must be a non-empty string'
-            });
+        const {
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address,
+        } = sanitizedData;
+
+        // Validate required fields
+        const invoiceNumberError = validateInvoiceNumber(invoice_number);
+        if (invoiceNumberError) {
+            res.status(400).json({ error: invoiceNumberError });
+            return;
+        }
+
+        const invoiceAmountError = validateInvoiceAmount(invoice_amount);
+        if (invoiceAmountError) {
+            res.status(400).json({ error: invoiceAmountError });
+            return;
+        }
+
+        const invoiceDueDateError = validateInvoiceDueDate(invoice_due_date);
+        if (invoiceDueDateError) {
+            res.status(400).json({ error: invoiceDueDateError });
+            return;
+        }
+
+        const termError = validateTerm(term);
+        if (termError) {
+            res.status(400).json({ error: termError });
+            return;
+        }
+
+        const customerNameError = validateCustomerName(customer_name);
+        if (customerNameError) {
+            res.status(400).json({ error: customerNameError });
+            return;
+        }
+
+        const deliveryCompletedError = validateDeliveryCompleted(delivery_completed);
+        if (deliveryCompletedError) {
+            res.status(400).json({ error: deliveryCompletedError });
+            return;
+        }
+
+        const advanceRateError = validateAdvanceRate(advance_rate);
+        if (advanceRateError) {
+            res.status(400).json({ error: advanceRateError });
+            return;
+        }
+
+        const monthlyInterestRateError = validateMonthlyInterestRate(monthly_interest_rate);
+        if (monthlyInterestRateError) {
+            res.status(400).json({ error: monthlyInterestRateError });
+            return;
+        }
+
+        const maxLoanError = validateMaxLoan(max_loan);
+        if (maxLoanError) {
+            res.status(400).json({ error: maxLoanError });
+            return;
+        }
+
+        const notPledgedError = validateNotPledged(not_pledged);
+        if (notPledgedError) {
+            res.status(400).json({ error: notPledgedError });
+            return;
+        }
+
+        const assignmentSignedError = validateAssignmentSigned(assignment_signed);
+        if (assignmentSignedError) {
+            res.status(400).json({ error: assignmentSignedError });
+            return;
+        }
+
+        const borrowerAddressError = validateBorrowerAddress(borrower_address);
+        if (borrowerAddressError) {
+            res.status(400).json({ error: borrowerAddressError });
             return;
         }
 
         // Insert into database
         const query = `
-            INSERT INTO "LoanRequests" (business_name, created_at)
-            VALUES ($1, NOW())
-            RETURNING id, created_at, business_name
+            INSERT INTO "LoanRequests" (
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                term,
+                customer_name,
+                delivery_completed,
+                advance_rate,
+                monthly_interest_rate,
+                max_loan,
+                not_pledged,
+                assignment_signed,
+                borrower_address,
+                created_at,
+                modified_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+            RETURNING 
+                id,
+                created_at,
+                modified_at,
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                term,
+                customer_name,
+                delivery_completed,
+                advance_rate,
+                monthly_interest_rate,
+                max_loan,
+                not_pledged,
+                assignment_signed,
+                borrower_address
         `;
 
-        const result = await pool.query<LoanRequest>(query, [business_name.trim()]);
+        const result = await pool.query<LoanRequest>(query, [
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address,
+        ]);
+
         const loanRequest = result.rows[0];
 
         res.status(201).json({
