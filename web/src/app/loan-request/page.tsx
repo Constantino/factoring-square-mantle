@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -95,7 +96,7 @@ export default function LoanRequestPage() {
 
     const invoiceAmountNum = parseFloat(formData.invoiceAmount) || 0;
     const advanceRate = 0.8;
-    const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate, 8000);
+    const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate);
     const maxLoan = formData.invoiceAmount ? `$${calculatedMaxLoan.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00";
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -103,6 +104,13 @@ export default function LoanRequestPage() {
         setIsSubmitting(true);
         setSubmitError(null);
         setSubmitSuccess(false);
+
+        // Validate wallet address
+        if (!walletAddress) {
+            setSubmitError("Please connect a wallet before submitting");
+            setIsSubmitting(false);
+            return;
+        }
 
         // Validate confirmations
         if (!confirmations.notPledged || !confirmations.authorizeAssignment) {
@@ -112,14 +120,45 @@ export default function LoanRequestPage() {
         }
 
         try {
-            // TODO: Add API call here when backend is ready
-            console.log("Loan request data:", {
-                ...formData,
-                confirmations,
-            });
+            let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            if (!apiUrl) {
+                throw new Error("NEXT_PUBLIC_API_URL is not configured");
+            }
+
+            // Ensure the URL has a protocol
+            if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+                apiUrl = `http://${apiUrl}`;
+            }
+
+            // Remove trailing slash if present
+            apiUrl = apiUrl.replace(/\/$/, "");
+
+            // Calculate values
+            const invoiceAmountNum = parseFloat(formData.invoiceAmount) || 0;
+            const advanceRate = 0.8;
+            const monthlyInterestRate = 0.015;
+            const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate, 8000);
+
+            // Transform form data to API format
+            const submissionData = {
+                invoice_number: formData.invoiceNumber,
+                invoice_amount: invoiceAmountNum,
+                invoice_due_date: formData.invoiceDueDate,
+                term: parseInt(formData.term, 10),
+                customer_name: formData.customerName,
+                delivery_completed: formData.deliveryCompleted,
+                advance_rate: advanceRate,
+                monthly_interest_rate: monthlyInterestRate,
+                max_loan: calculatedMaxLoan,
+                not_pledged: confirmations.notPledged,
+                assignment_signed: confirmations.authorizeAssignment,
+                borrower_address: walletAddress,
+            };
+
+            const response = await axios.post(`${apiUrl}/loan-requests`, submissionData);
 
             setSubmitSuccess(true);
-            console.log("Loan request submitted successfully");
+            console.log("Loan request submitted successfully:", response.data);
 
             // Reset form after successful submission
             setFormData({
@@ -136,7 +175,16 @@ export default function LoanRequestPage() {
             });
         } catch (error) {
             console.error("Error submitting loan request:", error);
-            setSubmitError("An unexpected error occurred");
+            if (axios.isAxiosError(error)) {
+                setSubmitError(
+                    error.response?.data?.error ||
+                    error.response?.data?.message ||
+                    error.message ||
+                    "Failed to submit loan request"
+                );
+            } else {
+                setSubmitError("An unexpected error occurred");
+            }
         } finally {
             setIsSubmitting(false);
         }
