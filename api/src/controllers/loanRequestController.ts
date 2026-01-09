@@ -1,9 +1,64 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
-import { LoanRequest } from '../models/loanRequest';
+import { LoanRequest, LoanRequestBody } from '../models/loanRequest';
 import { validateRequest } from '../validators/loanRequestValidators';
 import { sanitizeLoanRequestRequest } from '../utils/sanitize';
 import { vaultService } from '../services/vaultService';
+
+const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> => {
+    const query = `
+        INSERT INTO "LoanRequests" (
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address,
+            created_at,
+            modified_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        RETURNING 
+            id,
+            created_at,
+            modified_at,
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address
+    `;
+
+    const result = await pool.query<LoanRequest>(query, [
+        params.invoice_number,
+        params.invoice_amount,
+        params.invoice_due_date,
+        params.term,
+        params.customer_name,
+        params.delivery_completed,
+        params.advance_rate,
+        params.monthly_interest_rate,
+        params.max_loan,
+        params.not_pledged,
+        params.assignment_signed,
+        params.borrower_address,
+    ]);
+
+    return result.rows[0];
+};
 
 export const getLoanRequestById = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -90,43 +145,7 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
         } = sanitizedData;
 
         // Insert into database
-        const query = `
-            INSERT INTO "LoanRequests" (
-                invoice_number,
-                invoice_amount,
-                invoice_due_date,
-                term,
-                customer_name,
-                delivery_completed,
-                advance_rate,
-                monthly_interest_rate,
-                max_loan,
-                not_pledged,
-                assignment_signed,
-                borrower_address,
-                created_at,
-                modified_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
-            RETURNING 
-                id,
-                created_at,
-                modified_at,
-                invoice_number,
-                invoice_amount,
-                invoice_due_date,
-                term,
-                customer_name,
-                delivery_completed,
-                advance_rate,
-                monthly_interest_rate,
-                max_loan,
-                not_pledged,
-                assignment_signed,
-                borrower_address
-        `;
-
-        const result = await pool.query<LoanRequest>(query, [
+        const loanRequest = await saveLoanRequest({
             invoice_number,
             invoice_amount,
             invoice_due_date,
@@ -139,9 +158,7 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             not_pledged,
             assignment_signed,
             borrower_address,
-        ]);
-
-        const loanRequest = result.rows[0];
+        });
 
         // Create vault for the loan request
         try {
