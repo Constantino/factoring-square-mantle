@@ -1,3 +1,5 @@
+import { LoanRequestBody } from '../models/loanRequest';
+
 export const validateInvoiceNumber = (invoice_number: unknown): string | null => {
     if (!invoice_number || typeof invoice_number !== 'string' || invoice_number.trim().length === 0) {
         return 'invoice_number is required and must be a non-empty string';
@@ -92,6 +94,75 @@ export const validateBorrowerAddress = (borrower_address: unknown): string | nul
     if (!borrower_address || typeof borrower_address !== 'string' || borrower_address.trim().length === 0) {
         return 'borrower_address is required and must be a non-empty string';
     }
+    return null;
+};
+
+// Type for validation where all fields are unknown (before validation)
+type LoanRequestBodyForValidation = {
+    [K in keyof LoanRequestBody]: unknown;
+};
+
+export const validateRequest = (data: LoanRequestBodyForValidation): string | null => {
+    const invoiceNumberError = validateInvoiceNumber(data.invoice_number);
+    if (invoiceNumberError) {
+        return invoiceNumberError;
+    }
+
+    const invoiceAmountError = validateInvoiceAmount(data.invoice_amount);
+    if (invoiceAmountError) {
+        return invoiceAmountError;
+    }
+
+    const invoiceDueDateError = validateInvoiceDueDate(data.invoice_due_date);
+    if (invoiceDueDateError) {
+        return invoiceDueDateError;
+    }
+
+    const termError = validateTerm(data.term);
+    if (termError) {
+        return termError;
+    }
+
+    const customerNameError = validateCustomerName(data.customer_name);
+    if (customerNameError) {
+        return customerNameError;
+    }
+
+    const deliveryCompletedError = validateDeliveryCompleted(data.delivery_completed);
+    if (deliveryCompletedError) {
+        return deliveryCompletedError;
+    }
+
+    const advanceRateError = validateAdvanceRate(data.advance_rate);
+    if (advanceRateError) {
+        return advanceRateError;
+    }
+
+    const monthlyInterestRateError = validateMonthlyInterestRate(data.monthly_interest_rate);
+    if (monthlyInterestRateError) {
+        return monthlyInterestRateError;
+    }
+
+    const maxLoanError = validateMaxLoan(data.max_loan);
+    if (maxLoanError) {
+        return maxLoanError;
+    }
+
+    const notPledgedError = validateNotPledged(data.not_pledged);
+    if (notPledgedError) {
+        return notPledgedError;
+    }
+
+    const assignmentSignedError = validateAssignmentSigned(data.assignment_signed);
+    if (assignmentSignedError) {
+        return assignmentSignedError;
+    }
+
+    const borrowerAddressError = validateBorrowerAddress(data.borrower_address);
+    if (borrowerAddressError) {
+        return borrowerAddressError;
+    }
+
     return null;
 };
 
