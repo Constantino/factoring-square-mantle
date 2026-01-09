@@ -293,6 +293,16 @@ export default function LoanRequestPage() {
                             </div>
                         </div>
 
+                        {/* Monthly Interest Rate Display */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                                Monthly Interest Rate
+                            </label>
+                            <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
+                                1.5%
+                            </div>
+                        </div>
+
                         {/* Max Loan Display */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-foreground">
