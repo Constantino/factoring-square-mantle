@@ -19,7 +19,7 @@ contract DeployMockUSDC is Script {
         require(address(mockUsdc) != address(0), "MockUSDC deployment failed");
         require(mockUsdc.owner() == deployer, "MockUSDC owner mismatch");
         require(mockUsdc.decimals() == 6, "MockUSDC decimals mismatch");
-        
+
         // Verify initial mint
         uint256 deployerBalance = mockUsdc.balanceOf(deployer);
         console.log("Deployer initial balance:", deployerBalance / 1e6, "USDC");
