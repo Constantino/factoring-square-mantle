@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
@@ -15,25 +15,25 @@ contract DeployMockUSDC is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy MockUSDC
-        MockUSDC mockUSDC = new MockUSDC();
-        require(address(mockUSDC) != address(0), "MockUSDC deployment failed");
-        require(mockUSDC.owner() == deployer, "MockUSDC owner mismatch");
-        require(mockUSDC.decimals() == 6, "MockUSDC decimals mismatch");
+        MockUSDC mockUsdc = new MockUSDC();
+        require(address(mockUsdc) != address(0), "MockUSDC deployment failed");
+        require(mockUsdc.owner() == deployer, "MockUSDC owner mismatch");
+        require(mockUsdc.decimals() == 6, "MockUSDC decimals mismatch");
         
         // Verify initial mint
-        uint256 deployerBalance = mockUSDC.balanceOf(deployer);
+        uint256 deployerBalance = mockUsdc.balanceOf(deployer);
         console.log("Deployer initial balance:", deployerBalance / 1e6, "USDC");
 
         vm.stopBroadcast();
 
         console.log("\n=== Deployment Successful ===");
-        console.log("MockUSDC Address:", address(mockUSDC));
-        console.log("Name:", mockUSDC.name());
-        console.log("Symbol:", mockUSDC.symbol());
-        console.log("Decimals:", mockUSDC.decimals());
+        console.log("MockUSDC Address:", address(mockUsdc));
+        console.log("Name:", mockUsdc.name());
+        console.log("Symbol:", mockUsdc.symbol());
+        console.log("Decimals:", mockUsdc.decimals());
         console.log("\nTo use this in your tests, add to .env:");
-        console.log("USDC_ADDRESS=", address(mockUSDC));
+        console.log("USDC_ADDRESS=", address(mockUsdc));
 
-        return mockUSDC;
+        return mockUsdc;
     }
 }
