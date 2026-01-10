@@ -93,6 +93,7 @@ export default function VaultsPage() {
                 amount,
                 wallet,
                 (step: string) => {
+                    console.log('Progress step:', step);
                     setProcessingStep(step);
                 }
             );
@@ -104,7 +105,12 @@ export default function VaultsPage() {
             await loadVaults();
             
             // Don't close modal - show success with transaction link
+        } catch (error) {
+            console.error('Participation error:', error);
+            // Re-throw to let modal handle the error display
+            throw error;
         } finally {
+            console.log('Resetting processing state');
             setIsProcessing(false);
             setProcessingStep("Processing...");
         }

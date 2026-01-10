@@ -118,9 +118,12 @@ export async function participateInVault(
         onProgress?.("Checking allowance...");
         const currentAllowance = await tokenContract.allowance(userAddress, vaultAddress);
         console.log('Current allowance:', currentAllowance.toString());
+        console.log('Required amount:', amountInWei.toString());
+        console.log('Needs approval:', currentAllowance < amountInWei);
 
         // Approve vault to spend tokens if needed
-        if (currentAllowance < amountInWei) {
+        // Using BigInt comparison - ensure allowance is sufficient
+        if (BigInt(currentAllowance.toString()) < BigInt(amountInWei.toString())) {
             onProgress?.("Requesting approval...");
             console.log('Approving vault to spend tokens...');
             const approveTx = await tokenContract.approve(vaultAddress, amountInWei);
@@ -128,8 +131,21 @@ export async function participateInVault(
             
             onProgress?.("Waiting for approval confirmation...");
             // Wait for approval transaction to be mined
-            await approveTx.wait();
-            console.log('Approval confirmed');
+            const approvalReceipt = await approveTx.wait();
+            console.log('Approval confirmed in block:', approvalReceipt?.blockNumber);
+            
+            // Add a small delay to ensure state is updated on chain
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Verify the allowance was set correctly
+            const newAllowance = await tokenContract.allowance(userAddress, vaultAddress);
+            console.log('New allowance after approval:', newAllowance.toString());
+            
+            if (BigInt(newAllowance.toString()) < BigInt(amountInWei.toString())) {
+                throw new Error('Approval failed: insufficient allowance after transaction');
+            }
+        } else {
+            console.log('Sufficient allowance already exists, skipping approval');
         }
 
         // Create vault contract instance
