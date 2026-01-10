@@ -97,7 +97,7 @@ function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
                 {markers.map((markerScore) => {
                     const markerAngle = scoreToAngle(markerScore);
                     const markerPoint = getArcPoint(markerAngle, outerRadius);
-                    const textPoint = getArcPoint(markerAngle, outerRadius + 20);
+                    const textPoint = getArcPoint(markerAngle, outerRadius + 10);
 
                     return (
                         <g key={markerScore}>
@@ -111,7 +111,7 @@ function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
                             />
                             <text
                                 x={textPoint.x}
-                                y={textPoint.y + 4}
+                                y={textPoint.y - 2}
                                 textAnchor="middle"
                                 fontSize="10"
                                 fill="#666"
@@ -175,7 +175,7 @@ export default function LoanDashboardPage() {
                     <h1 className="text-4xl font-bold mb-4 text-foreground">Loan Dashboard</h1>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Card
                         initial={false}
                         whileHover={undefined}
