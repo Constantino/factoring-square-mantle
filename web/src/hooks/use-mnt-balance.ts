@@ -11,13 +11,14 @@ import { ethers } from "ethers";
 export function useMNTBalance() {
     const { walletAddress, isReady } = useWalletAddress();
     const { wallets } = useWallets();
-    const [balance, setBalance] = useState<string | null>(null);
+    const [balance, setBalance] = useState<string>('0.0000');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchBalance = async () => {
             if (!isReady || !walletAddress || !wallets || wallets.length === 0) {
+                setBalance('0.0000');
                 return;
             }
 
@@ -39,7 +40,7 @@ export function useMNTBalance() {
             } catch (err) {
                 console.error('Error fetching MNT balance:', err);
                 setError(err instanceof Error ? err.message : 'Failed to fetch MNT balance');
-                setBalance(null);
+                setBalance('0.0000');
             } finally {
                 setIsLoading(false);
             }

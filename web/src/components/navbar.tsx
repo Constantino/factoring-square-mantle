@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useUserStore } from "@/stores/userStore";
-import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import { useUSDCBalance } from "@/hooks/use-usdc-balance";
 import { useMNTBalance } from "@/hooks/use-mnt-balance";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
@@ -13,7 +12,6 @@ import { CopyButton } from "@/components/copy-button";
 
 const Navbar = () => {
     const { isLoggedIn, user } = useUserStore();
-    const { balance, isLoading } = useWalletBalance();
     const { balance: usdcBalance, isLoading: isLoadingUsdc } = useUSDCBalance();
     const { balance: mntBalance, isLoading: isLoadingMnt } = useMNTBalance();
 
@@ -40,21 +38,12 @@ const Navbar = () => {
                         <div className="flex flex-col gap-1">
                             {/* Row 1: Balances and Username */}
                             <div className="flex items-center gap-4">
-                                {/* ETH Balance */}
-                                <div className="text-sm text-muted-foreground">
-                                    {isLoading ? (
-                                        <span>Loading...</span>
-                                    ) : (
-                                        <span className="font-mono">{balance || '0.0000'} ETH</span>
-                                    )}
-                                </div>
-
                                 {/* MNT Balance */}
                                 <div className="text-sm text-muted-foreground">
                                     {isLoadingMnt ? (
                                         <span>Loading...</span>
                                     ) : (
-                                        <span className="font-mono">{mntBalance || '0.0000'} MNT</span>
+                                        <span className="font-mono">{mntBalance} MNT</span>
                                     )}
                                 </div>
 
@@ -63,7 +52,7 @@ const Navbar = () => {
                                     {isLoadingUsdc ? (
                                         <span>Loading...</span>
                                     ) : (
-                                        <span className="font-mono">${usdcBalance || '0.00'} USDC</span>
+                                        <span className="font-mono">${usdcBalance} USDC</span>
                                     )}
                                 </div>
                                 

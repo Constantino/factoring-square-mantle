@@ -21,19 +21,21 @@ const ERC20_BALANCE_ABI = [
 export function useUSDCBalance() {
     const { walletAddress, isReady } = useWalletAddress();
     const { wallets } = useWallets();
-    const [balance, setBalance] = useState<string | null>(null);
+    const [balance, setBalance] = useState<string>('0.00');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchBalance = async () => {
             if (!isReady || !walletAddress || !wallets || wallets.length === 0) {
+                setBalance('0.00');
                 return;
             }
 
             const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS;
             if (!usdcAddress) {
                 setError("USDC address not configured");
+                setBalance('0.00');
                 return;
             }
 
@@ -63,7 +65,7 @@ export function useUSDCBalance() {
             } catch (err) {
                 console.error('Error fetching USDC balance:', err);
                 setError(err instanceof Error ? err.message : 'Failed to fetch USDC balance');
-                setBalance(null);
+                setBalance('0.00');
             } finally {
                 setIsLoading(false);
             }
