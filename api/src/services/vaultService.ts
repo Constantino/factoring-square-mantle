@@ -2,11 +2,8 @@ import { ethers } from "ethers";
 import { pool } from "../config/database";
 import { RPC_URL, PRIVATE_KEY, VAULT_FACTORY_ADDRESS } from "../config/constants";
 import { CreateVaultBody, DeployVaultResult, Vault } from "../models/vault";
-
-const VAULT_FACTORY_ABI = [
-    "event VaultCreated(address indexed vault, string invoiceNumber, address borrower)",
-    "function deployVault(string memory invoiceName, string memory invoiceNumber, address borrower, uint256 maxCapacity, uint256 maturityDate) external returns (address)"
-];
+import { CreateVaultLenderBody, VaultLender } from "../models/vaultLender";
+import {VAULTFACTORY_ABI} from "../abi/VaultFactory";
 
 export class VaultService {
     private provider: ethers.JsonRpcProvider;
@@ -16,7 +13,7 @@ export class VaultService {
     constructor() {
         this.provider = new ethers.JsonRpcProvider(RPC_URL);
         this.wallet = new ethers.Wallet(PRIVATE_KEY, this.provider);
-        this.vaultFactory = new ethers.Contract(VAULT_FACTORY_ADDRESS, VAULT_FACTORY_ABI, this.wallet);
+        this.vaultFactory = new ethers.Contract(VAULT_FACTORY_ADDRESS, VAULTFACTORY_ABI, this.wallet);
     }
 
     async createVault(vaultData: CreateVaultBody): Promise<DeployVaultResult> {
@@ -137,6 +134,95 @@ export class VaultService {
         `;
 
         const result = await pool.query<Vault>(query);
+        return result.rows;
+    }
+
+    async trackDeposit(
+        vaultAddress: string,
+        depositData: CreateVaultLenderBody
+    ): Promise<{ vault: Vault; lender: VaultLender }> {
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // 1. Get vault_id from vault_address
+            const vaultQuery = `
+                SELECT vault_id, max_capacity, current_capacity
+                FROM "Vaults"
+                WHERE vault_address = $1
+            `;
+            const vaultResult = await client.query(vaultQuery, [vaultAddress]);
+
+            if (vaultResult.rows.length === 0) {
+                throw new Error(`Vault not found: ${vaultAddress}`);
+            }
+
+            const vault = vaultResult.rows[0];
+            const vaultId = vault.vault_id;
+
+            // 2. Insert lender record
+            const lenderQuery = `
+                INSERT INTO "VaultLenders" (
+                    vault_id,
+                    lender_address,
+                    amount,
+                    tx_hash,
+                    created_at
+                )
+                VALUES ($1, $2, $3, $4, NOW())
+                RETURNING *
+            `;
+
+            const lenderResult = await client.query<VaultLender>(lenderQuery, [
+                vaultId,
+                depositData.lenderAddress,
+                depositData.amount,
+                depositData.txHash
+            ]);
+
+            const lender = lenderResult.rows[0];
+
+            // 3. Update vault current_capacity
+            const newCapacity = parseFloat(vault.current_capacity) + depositData.amount;
+            const updateVaultQuery = `
+                UPDATE "Vaults"
+                SET current_capacity = $1,
+                    modified_at = NOW()
+                WHERE vault_id = $2
+                RETURNING *
+            `;
+
+            const updatedVaultResult = await client.query<Vault>(updateVaultQuery, [
+                newCapacity,
+                vaultId
+            ]);
+
+            await client.query('COMMIT');
+
+            return {
+                vault: updatedVaultResult.rows[0],
+                lender
+            };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error tracking deposit:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    async getVaultLenders(vaultAddress: string): Promise<VaultLender[]> {
+        const query = `
+            SELECT vl.*
+            FROM "VaultLenders" vl
+            JOIN "Vaults" v ON vl.vault_id = v.vault_id
+            WHERE v.vault_address = $1
+            ORDER BY vl.created_at DESC
+        `;
+
+        const result = await pool.query<VaultLender>(query, [vaultAddress]);
         return result.rows;
     }
 }

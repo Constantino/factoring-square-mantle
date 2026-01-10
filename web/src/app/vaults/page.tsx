@@ -2,49 +2,35 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useWallets } from "@privy-io/react-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface Vault {
-    vault_id: number;
-    vault_address: string;
-    borrower_address: string;
-    vault_name: string;
-    max_capacity: string;
-    current_capacity: string;
-    created_at: string;
-    modified_at: string;
-}
+import { Button } from "@/components/ui/button";
+import { ParticipateModal } from "@/components/participate-modal";
+import { fetchVaults, participateInVault} from "@/services/vault";
+import {Vault} from "@/types/vault";
 
 export default function VaultsPage() {
     const [vaults, setVaults] = useState<Vault[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [processingStep, setProcessingStep] = useState("Processing...");
+    const [txHash, setTxHash] = useState<string | null>(null);
+    const { wallets } = useWallets();
 
     useEffect(() => {
-        fetchVaults();
+        loadVaults();
     }, []);
 
-    const fetchVaults = async () => {
+    const loadVaults = async () => {
         try {
             setIsLoading(true);
             setError(null);
-
-            let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            if (!apiUrl) {
-                throw new Error("NEXT_PUBLIC_API_URL is not configured");
-            }
-
-            // Ensure the URL has a protocol
-            if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
-                apiUrl = `http://${apiUrl}`;
-            }
-
-            // Remove trailing slash if present
-            apiUrl = apiUrl.replace(/\/$/, "");
-
-            const response = await axios.get(`${apiUrl}/vaults`);
-            setVaults(response.data.data || []);
+            const data = await fetchVaults();
+            setVaults(data);
         } catch (err) {
             console.error("Error fetching vaults:", err);
             if (axios.isAxiosError(err)) {
@@ -75,6 +61,59 @@ export default function VaultsPage() {
     const truncateAddress = (address: string) => {
         if (!address) return "";
         return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    };
+
+    const handleLend = (vault: Vault) => {
+        setSelectedVault(vault);
+        setIsModalOpen(true);
+    };
+
+    const handleConfirmParticipation = async (amount: number) => {
+        if (!selectedVault) return;
+
+        // Check if wallet is available
+        if (!wallets || wallets.length === 0) {
+            throw new Error("No wallet connected. Please connect your wallet.");
+        }
+
+        setIsProcessing(true);
+        setTxHash(null);
+
+        try {
+            const wallet = wallets[0];
+            
+            console.log('Initiating participation...');
+            
+            setProcessingStep("Checking allowance...");
+            
+            // Call the vault service to participate
+            // This will trigger Privy's approval modal for token approval and deposit
+            const hash = await participateInVault(
+                selectedVault.vault_address,
+                amount,
+                wallet,
+                (step: string) => {
+                    console.log('Progress step:', step);
+                    setProcessingStep(step);
+                }
+            );
+
+            console.log('Transaction successful:', hash);
+            setTxHash(hash);
+            
+            // Reload vaults to show updated capacity
+            await loadVaults();
+            
+            // Don't close modal - show success with transaction link
+        } catch (error) {
+            console.error('Participation error:', error);
+            // Re-throw to let modal handle the error display
+            throw error;
+        } finally {
+            console.log('Resetting processing state');
+            setIsProcessing(false);
+            setProcessingStep("Processing...");
+        }
     };
 
     return (
@@ -176,12 +215,34 @@ export default function VaultsPage() {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Participate Button */}
+                                    <Button 
+                                        className="w-full mt-2"
+                                        onClick={() => handleLend(vault)}
+                                    >
+                                        Lend
+                                    </Button>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Participate Modal */}
+            <ParticipateModal
+                vault={selectedVault}
+                isOpen={isModalOpen}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setTxHash(null);
+                }}
+                onConfirm={handleConfirmParticipation}
+                isProcessing={isProcessing}
+                processingStep={processingStep}
+                txHash={txHash}
+            />
         </div>
     );
 }
