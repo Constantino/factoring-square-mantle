@@ -27,7 +27,7 @@ const startServer = async (): Promise<void> => {
         // Test database connection before starting server
         await testConnection();
 
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server is running on port ${PORT}`);
         });
     } catch (error) {

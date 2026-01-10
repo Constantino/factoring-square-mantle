@@ -60,7 +60,7 @@ jobs:
             fi
             
             # Create .env
-            cat > .env << 'EOF'
+            cat > .env << EOF
             PORT=${{ secrets.PORT }}
             DATABASE_CONNECTION_STRING=${{ secrets.DATABASE_CONNECTION_STRING }}
             RPC_URL=${{ secrets.RPC_URL }}
