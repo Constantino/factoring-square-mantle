@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { ErrorPanel } from "@/components/error-panel";
 
 interface Vault {
     vault_id: number;
@@ -28,7 +29,7 @@ interface ParticipateModalProps {
     vault: Vault | null;
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (amount: number) => void;
+    onConfirm: (amount: number) => Promise<void>;
     isProcessing?: boolean;
 }
 
@@ -41,6 +42,7 @@ export function ParticipateModal({
 }: ParticipateModalProps) {
     const [amount, setAmount] = useState<number>(0);
     const [inputValue, setInputValue] = useState<string>("0");
+    const [error, setError] = useState<string | null>(null);
 
     // Calculate available capacity
     const availableCapacity = vault
@@ -52,6 +54,7 @@ export function ParticipateModal({
         if (isOpen && vault) {
             setAmount(0);
             setInputValue("0");
+            setError(null);
         }
     }, [isOpen, vault]);
 
@@ -82,10 +85,21 @@ export function ParticipateModal({
     };
 
     // Handle confirm
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (amount > 0 && amount <= availableCapacity) {
-            onConfirm(amount);
-            onClose();
+            setError(null);
+            try {
+                await onConfirm(amount);
+                // Only close on success - parent will handle this
+            } catch (err) {
+                // Display error in modal
+                const errorMessage = err instanceof Error 
+                    ? err.message.includes('user rejected') || err.message.includes('User denied')
+                        ? 'Transaction cancelled by user'
+                        : err.message
+                    : 'Failed to participate in vault';
+                setError(errorMessage);
+            }
         }
     };
 
@@ -93,7 +107,11 @@ export function ParticipateModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent 
+                className="sm:max-w-[500px]"
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>Participate in {vault.vault_name}</DialogTitle>
                     <DialogDescription>
@@ -183,6 +201,16 @@ export function ParticipateModal({
                         {isProcessing ? "Processing..." : "Confirm Participation"}
                     </Button>
                 </DialogFooter>
+
+                {/* Error Display - Below Buttons */}
+                <ErrorPanel
+                    error={error}
+                    textSize="xs"
+                    maxHeight="max-h-32"
+                    collapsible={true}
+                    collapseThreshold={100}
+                    className="mt-4"
+                />
             </DialogContent>
         </Dialog>
     );

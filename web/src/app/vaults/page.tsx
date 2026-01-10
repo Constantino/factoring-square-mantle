@@ -70,12 +70,10 @@ export default function VaultsPage() {
 
         // Check if wallet is available
         if (!wallets || wallets.length === 0) {
-            setError("No wallet connected. Please connect your wallet.");
-            return;
+            throw new Error("No wallet connected. Please connect your wallet.");
         }
 
         setIsProcessing(true);
-        setError(null);
 
         try {
             const wallet = wallets[0];
@@ -95,15 +93,8 @@ export default function VaultsPage() {
             // Reload vaults to show updated capacity
             await loadVaults();
             
-            // Close modal
+            // Close modal only on success
             setIsModalOpen(false);
-        } catch (err) {
-            console.error('Error participating in vault:', err);
-            setError(
-                err instanceof Error 
-                    ? err.message 
-                    : 'Failed to participate in vault'
-            );
         } finally {
             setIsProcessing(false);
         }
