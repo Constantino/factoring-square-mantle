@@ -150,6 +150,11 @@ generate-all-abis:
 			echo "export const $${contract_name_upper}_ABI = $$(jq -c .abi "$$file");" > "../api/src/abi/$$contract.ts"; \
 		fi; \
 	done
+	@echo "Generating ABI for ERC20 (from OpenZeppelin)"
+	@if [ -f "out/ERC20.sol/ERC20.json" ]; then \
+		echo "export const ERC20_ABI = $$(jq -c .abi "out/ERC20.sol/ERC20.json") as const;" > "../web/src/app/abi/ERC20.ts"; \
+		echo "export const ERC20_ABI = $$(jq -c .abi "out/ERC20.sol/ERC20.json");" > "../api/src/abi/ERC20.ts"; \
+	fi
 	@echo "All ABI files generated in ../web/src/app/abi/ and ../api/src/abi/"
 	@if [ -f "../web/src/app/abi/abis.ts" ]; then \
 		rm ../web/src/app/abi/abis.ts; \
