@@ -63,7 +63,7 @@ export default function VaultsPage() {
         return `${address.slice(0, 6)}...${address.slice(-4)}`;
     };
 
-    const handleParticipate = (vault: Vault) => {
+    const handleLend = (vault: Vault) => {
         setSelectedVault(vault);
         setIsModalOpen(true);
     };
@@ -219,9 +219,9 @@ export default function VaultsPage() {
                                     {/* Participate Button */}
                                     <Button 
                                         className="w-full mt-2"
-                                        onClick={() => handleParticipate(vault)}
+                                        onClick={() => handleLend(vault)}
                                     >
-                                        Participate
+                                        Lend
                                     </Button>
                                 </CardContent>
                             </Card>
