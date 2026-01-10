@@ -146,7 +146,8 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
                 max_loan,
                 not_pledged,
                 assignment_signed,
-                borrower_address
+                borrower_address,
+                status
             FROM "LoanRequests"
             WHERE id = $1
         `;
