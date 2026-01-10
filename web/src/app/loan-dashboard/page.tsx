@@ -268,6 +268,85 @@ export default function LoanDashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Invoices Table */}
+                <Card
+                    initial={false}
+                    whileHover={undefined}
+                >
+                    <CardHeader>
+                        <CardTitle className="text-base">Invoices & Loans</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="border-b border-border">
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Invoice Number
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Amount
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Due Date
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Term
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Customer Name
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Monthly Interest Rate
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Max Loan
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Status
+                                        </th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {/* Example row - can be replaced with dynamic data */}
+                                    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            -
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
