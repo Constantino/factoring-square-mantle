@@ -167,6 +167,7 @@ interface LoanRequest {
     borrower_address: string;
     created_at: string;
     modified_at: string;
+    status: string;
 }
 
 export default function LoanDashboardPage() {
@@ -257,14 +258,28 @@ export default function LoanDashboardPage() {
         return `${(rate * 100).toFixed(2)}%`;
     };
 
-    const getStatus = (request: LoanRequest) => {
-        if (request.delivery_completed && request.assignment_signed) {
-            return "Active";
-        } else if (request.delivery_completed) {
-            return "Pending Assignment";
-        } else {
-            return "Pending Delivery";
+    const getStatusBadgeClass = (status: string) => {
+        const statusLower = status.toLowerCase();
+        switch (statusLower) {
+            case "listed":
+                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+            case "active":
+                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+            case "paid":
+                return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200";
+            case "canceled":
+                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+            default:
+                return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
         }
+    };
+
+    const formatStatus = (status: string) => {
+        // Convert snake_case or lowercase to Title Case
+        return status
+            .split(/[_\s]+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
     };
 
     const handleView = (requestId: number) => {
@@ -460,13 +475,8 @@ export default function LoanDashboardPage() {
                                                     {formatCurrency(request.max_loan)}
                                                 </td>
                                                 <td className="py-3 px-4 text-xs text-foreground">
-                                                    <span className={`px-2 py-1 rounded-full ${getStatus(request) === "Active"
-                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                        : getStatus(request) === "Pending Assignment"
-                                                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                                            : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                                                        }`}>
-                                                        {getStatus(request)}
+                                                    <span className={`px-2 py-1 rounded-full ${getStatusBadgeClass(request.status)}`}>
+                                                        {formatStatus(request.status)}
                                                     </span>
                                                 </td>
                                                 <td className="py-3 px-4 text-xs text-foreground">
