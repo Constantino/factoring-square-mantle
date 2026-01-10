@@ -33,37 +33,7 @@ export default function LoanDashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card
-                        initial={false}
-                        whileHover={undefined}
-                    >
-                        <CardHeader>
-                            <CardTitle>Balances</CardTitle>
-                            <CardDescription>
-                                Your account balances
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">
-                                        USDC Balance
-                                    </label>
-                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
-                                        $0.00
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">
-                                        Debt
-                                    </label>
-                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
-                                        $0.00
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+
 
                     <Card
                         initial={false}
@@ -106,6 +76,38 @@ export default function LoanDashboardPage() {
                                             : "Loading wallet information..."}
                                     </div>
                                 )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        initial={false}
+                        whileHover={undefined}
+                    >
+                        <CardHeader>
+                            <CardTitle>Balances</CardTitle>
+                            <CardDescription>
+                                Your account balances
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">
+                                        USDC Balance
+                                    </label>
+                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
+                                        $0.00
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">
+                                        Debt
+                                    </label>
+                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
+                                        $0.00
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
