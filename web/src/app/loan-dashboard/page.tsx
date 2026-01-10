@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,10 +152,77 @@ function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
     );
 }
 
+interface LoanRequest {
+    id: number;
+    invoice_number: string;
+    invoice_amount: number;
+    invoice_due_date: string;
+    term: number;
+    customer_name: string;
+    monthly_interest_rate: number;
+    max_loan: number;
+    delivery_completed: boolean;
+    assignment_signed: boolean;
+    not_pledged: boolean;
+    borrower_address: string;
+    created_at: string;
+    modified_at: string;
+}
+
 export default function LoanDashboardPage() {
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
     const [copied, setCopied] = useState(false);
+    const [loanRequests, setLoanRequests] = useState<LoanRequest[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const creditScore = 725; // Example score - can be made dynamic later
+
+    useEffect(() => {
+        if (walletAddress) {
+            fetchLoanRequests();
+        } else {
+            setLoanRequests([]);
+        }
+    }, [walletAddress]);
+
+    const fetchLoanRequests = async () => {
+        if (!walletAddress) return;
+
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            if (!apiUrl) {
+                throw new Error("NEXT_PUBLIC_API_URL is not configured");
+            }
+
+            // Ensure the URL has a protocol
+            if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+                apiUrl = `http://${apiUrl}`;
+            }
+
+            // Remove trailing slash if present
+            apiUrl = apiUrl.replace(/\/$/, "");
+
+            const response = await axios.get(`${apiUrl}/loan-requests/borrower/${walletAddress}`);
+            setLoanRequests(response.data.data || []);
+        } catch (err) {
+            console.error("Error fetching loan requests:", err);
+            if (axios.isAxiosError(err)) {
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Failed to fetch loan requests"
+                );
+            } else {
+                setError("An unexpected error occurred");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleCopy = async () => {
         if (!walletAddress) return;
@@ -166,6 +234,52 @@ export default function LoanDashboardPage() {
         } catch (err) {
             console.error("Failed to copy:", err);
         }
+    };
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(amount);
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
+
+    const formatPercentage = (rate: number) => {
+        return `${(rate * 100).toFixed(2)}%`;
+    };
+
+    const getStatus = (request: LoanRequest) => {
+        if (request.delivery_completed && request.assignment_signed) {
+            return "Active";
+        } else if (request.delivery_completed) {
+            return "Pending Assignment";
+        } else {
+            return "Pending Delivery";
+        }
+    };
+
+    const handleView = (requestId: number) => {
+        // TODO: Implement view functionality
+        console.log("View request:", requestId);
+    };
+
+    const handleWithdrawRequest = (requestId: number) => {
+        // TODO: Implement withdraw request functionality
+        console.log("Withdraw request:", requestId);
+    };
+
+    const handlePayLoan = (requestId: number) => {
+        // TODO: Implement pay loan functionality
+        console.log("Pay loan:", requestId);
     };
 
     return (
@@ -303,36 +417,89 @@ export default function LoanDashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {/* Example row - can be replaced with dynamic data */}
-                                    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            -
-                                        </td>
-                                    </tr>
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={9} className="py-8 px-4 text-center text-xs text-muted-foreground">
+                                                Loading loan requests...
+                                            </td>
+                                        </tr>
+                                    ) : error ? (
+                                        <tr>
+                                            <td colSpan={9} className="py-8 px-4 text-center text-xs text-destructive">
+                                                {error}
+                                            </td>
+                                        </tr>
+                                    ) : loanRequests.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} className="py-8 px-4 text-center text-xs text-muted-foreground">
+                                                No loan requests found
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        loanRequests.map((request) => (
+                                            <tr key={request.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                                                <td className="py-3 px-4 text-xs text-foreground font-mono">
+                                                    {request.invoice_number}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    {formatCurrency(request.invoice_amount)}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    {formatDate(request.invoice_due_date)}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    {request.term} days
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    {request.customer_name}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    {formatPercentage(request.monthly_interest_rate)}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    {formatCurrency(request.max_loan)}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    <span className={`px-2 py-1 rounded-full ${getStatus(request) === "Active"
+                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                                        : getStatus(request) === "Pending Assignment"
+                                                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                                            : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                                                        }`}>
+                                                        {getStatus(request)}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 text-xs text-foreground">
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs"
+                                                            onClick={() => handleView(request.id)}
+                                                        >
+                                                            View
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs"
+                                                            onClick={() => handleWithdrawRequest(request.id)}
+                                                        >
+                                                            Withdraw
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs"
+                                                            onClick={() => handlePayLoan(request.id)}
+                                                        >
+                                                            Pay
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
