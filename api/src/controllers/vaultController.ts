@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { CreateVaultBody } from "../models/vault";
 import { CreateVaultLenderBody } from "../models/vaultLender";
-import { validateRequest } from "../validators/vaultValidator";
+import { validateRequest, validateTrackDepositRequest, validateVaultLenderRequest } from "../validators/vaultValidator";
 import { vaultService } from "../services/vaultService";
 
 export const createVault = async (req: Request, res: Response): Promise<void> => {
@@ -48,58 +48,39 @@ export const getAllVaults = async (req: Request, res: Response): Promise<void> =
     }
 };
 
-export const recordDeposit = async (req: Request, res: Response): Promise<void> => {
+export const trackDeposit = async (req: Request, res: Response): Promise<void> => {
     try {
         const { vaultAddress } = req.params;
         const body: CreateVaultLenderBody = req.body;
 
-        // Validate required fields
-        if (!body.lenderAddress || !body.amount || !body.txHash) {
-            res.status(400).json({ 
-                error: 'Missing required fields: lenderAddress, amount, txHash' 
-            });
-            return;
-        }
-
-        // Validate vault address format
-        if (!vaultAddress || !vaultAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-            res.status(400).json({ error: 'Invalid vault address format' });
-            return;
-        }
-
-        // Validate lender address format
-        if (!body.lenderAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-            res.status(400).json({ error: 'Invalid lender address format' });
-            return;
-        }
-
-        // Validate amount is positive
-        if (body.amount <= 0) {
-            res.status(400).json({ error: 'Amount must be positive' });
+        // Validate deposit tracking request
+        const validationError = validateTrackDepositRequest(vaultAddress, body);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
             return;
         }
 
         // Record deposit using service
-        const result = await vaultService.recordDeposit(vaultAddress, body);
+        const result = await vaultService.trackDeposit(vaultAddress, body);
         
         res.status(200).json({
-            message: 'Deposit recorded successfully',
+            message: 'Deposit tracked successfully',
             data: result
         });
     } catch (error) {
-        console.error('Error recording deposit:', error);
+        console.error('Error tracking deposit:', error);
         
         // Check for duplicate transaction hash error
         if (error instanceof Error && error.message.includes('duplicate key')) {
             res.status(409).json({
-                error: 'Deposit already recorded',
+                error: 'Deposit already tracked',
                 details: 'This transaction has already been processed'
             });
             return;
         }
 
         res.status(500).json({
-            error: 'Failed to record deposit',
+            error: 'Failed to track deposit',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
@@ -110,8 +91,9 @@ export const getVaultLenders = async (req: Request, res: Response): Promise<void
         const { vaultAddress } = req.params;
 
         // Validate vault address format
-        if (!vaultAddress || !vaultAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-            res.status(400).json({ error: 'Invalid vault address format' });
+        const validationError = validateVaultLenderRequest(vaultAddress);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
             return;
         }
 

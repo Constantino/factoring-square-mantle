@@ -132,7 +132,7 @@ export class VaultService {
         return result.rows;
     }
 
-    async recordDeposit(
+    async trackDeposit(
         vaultAddress: string,
         depositData: CreateVaultLenderBody
     ): Promise<{ vault: Vault; lender: VaultLender }> {
@@ -201,7 +201,7 @@ export class VaultService {
             };
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('Error recording deposit:', error);
+            console.error('Error tracking deposit:', error);
             throw error;
         } finally {
             client.release();
