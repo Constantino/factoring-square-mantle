@@ -23,7 +23,7 @@ export class VaultService {
         try {
             // Convert invoice amount to wei (assuming USDC with 6 decimals)
             const maxCapacity = ethers.parseUnits(vaultData.invoiceAmount.toString(), 6);
-            
+
             // Deploy vault
             const tx = await this.vaultFactory.deployVault(
                 vaultData.invoiceName,
@@ -32,9 +32,9 @@ export class VaultService {
                 maxCapacity,
                 vaultData.maturityDate
             );
-            
+
             const receipt = await tx.wait();
-            
+
             // Extract vault address from VaultCreated event
             const vaultCreatedEvent = receipt.logs
                 .map((log: any) => {
@@ -45,27 +45,28 @@ export class VaultService {
                     }
                 })
                 .find((parsedLog: any) => parsedLog && parsedLog.name === 'VaultCreated');
-            
+
             if (!vaultCreatedEvent) {
                 throw new Error('Failed to extract vault address from transaction');
             }
-            
+
             const vaultAddress = vaultCreatedEvent.args.vault;
             const vaultName = `${vaultData.invoiceName}_${vaultData.invoiceNumber}_Vault`;
             const vaultSymbol = `${vaultData.invoiceName}_${vaultData.invoiceNumber}`;
             const explorerUrl = `https://sepolia.mantlescan.xyz/tx/${receipt.hash}`;
             const vaultExplorerUrl = `https://sepolia.mantlescan.xyz/address/${vaultAddress}`;
             const factoryExplorerUrl = `https://sepolia.mantlescan.xyz/address/${VAULT_FACTORY_ADDRESS}`;
-            
+
             // Insert vault record into database
             await this.saveVault({
                 vaultAddress,
                 borrowerAddress: vaultData.borrowerAddress,
                 vaultName,
                 maxCapacity: vaultData.invoiceAmount,
-                currentCapacity: 0
+                currentCapacity: 0,
+                loanRequestId: vaultData.loanRequestId
             });
-            
+
             return {
                 vaultAddress,
                 vaultExplorerUrl,
@@ -93,6 +94,7 @@ export class VaultService {
         vaultName: string;
         maxCapacity: number;
         currentCapacity: number;
+        loanRequestId?: number;
     }): Promise<void> {
         const query = `
             INSERT INTO "Vaults" (
@@ -101,10 +103,11 @@ export class VaultService {
                 vault_name,
                 max_capacity,
                 current_capacity,
+                loan_request_id,
                 created_at,
                 modified_at
             )
-            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
         `;
 
         await pool.query(query, [
@@ -112,7 +115,8 @@ export class VaultService {
             vaultData.borrowerAddress,
             vaultData.vaultName,
             vaultData.maxCapacity,
-            vaultData.currentCapacity
+            vaultData.currentCapacity,
+            vaultData.loanRequestId || null
         ]);
     }
 
@@ -125,6 +129,7 @@ export class VaultService {
                 vault_name,
                 max_capacity,
                 current_capacity,
+                loan_request_id,
                 created_at,
                 modified_at
             FROM "Vaults"
