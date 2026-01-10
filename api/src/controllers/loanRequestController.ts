@@ -1,15 +1,64 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
+import { LoanRequest, LoanRequestBody } from '../models/loanRequest';
+import { validateRequest } from '../validators/loanRequestValidators';
+import { sanitizeLoanRequestRequest } from '../utils/sanitize';
+import { vaultService } from '../services/vaultService';
 
-interface LoanRequestBody {
-    business_name: string;
-}
+const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> => {
+    const query = `
+        INSERT INTO "LoanRequests" (
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address,
+            created_at,
+            modified_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        RETURNING 
+            id,
+            created_at,
+            modified_at,
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address
+    `;
 
-interface LoanRequest {
-    id: number;
-    created_at: Date;
-    business_name: string;
-}
+    const result = await pool.query<LoanRequest>(query, [
+        params.invoice_number,
+        params.invoice_amount,
+        params.invoice_due_date,
+        params.term,
+        params.customer_name,
+        params.delivery_completed,
+        params.advance_rate,
+        params.monthly_interest_rate,
+        params.max_loan,
+        params.not_pledged,
+        params.assignment_signed,
+        params.borrower_address,
+    ]);
+
+    return result.rows[0];
+};
 
 export const getLoanRequestById = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -26,7 +75,22 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
 
         // Query database
         const query = `
-            SELECT id, created_at, business_name
+            SELECT 
+                id,
+                created_at,
+                modified_at,
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                term,
+                customer_name,
+                delivery_completed,
+                advance_rate,
+                monthly_interest_rate,
+                max_loan,
+                not_pledged,
+                assignment_signed,
+                borrower_address
             FROM "LoanRequests"
             WHERE id = $1
         `;
@@ -55,30 +119,74 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
 
 export const createLoanRequest = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { business_name }: LoanRequestBody = req.body;
+        // Sanitize input data
+        const sanitizedData = sanitizeLoanRequestRequest(req.body);
 
-        // Validate input
-        if (!business_name || typeof business_name !== 'string' || business_name.trim().length === 0) {
-            res.status(400).json({
-                error: 'business_name is required and must be a non-empty string'
-            });
+        // Validate request
+        const validationError = validateRequest(sanitizedData);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
             return;
         }
 
+        const {
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address,
+        } = sanitizedData;
+
         // Insert into database
-        const query = `
-            INSERT INTO "LoanRequests" (business_name, created_at)
-            VALUES ($1, NOW())
-            RETURNING id, created_at, business_name
-        `;
-
-        const result = await pool.query<LoanRequest>(query, [business_name.trim()]);
-        const loanRequest = result.rows[0];
-
-        res.status(201).json({
-            message: 'Loan request created successfully',
-            data: loanRequest
+        const loanRequest = await saveLoanRequest({
+            invoice_number,
+            invoice_amount,
+            invoice_due_date,
+            term,
+            customer_name,
+            delivery_completed,
+            advance_rate,
+            monthly_interest_rate,
+            max_loan,
+            not_pledged,
+            assignment_signed,
+            borrower_address,
         });
+
+        // Create vault for the loan request
+        try {
+            // Convert invoice_due_date to Unix timestamp (seconds)
+            const maturityDate = Math.floor(new Date(loanRequest.invoice_due_date).getTime() / 1000);
+
+            const vaultResult = await vaultService.createVault({
+                invoiceName: loanRequest.customer_name,
+                invoiceNumber: loanRequest.invoice_number,
+                borrowerAddress: loanRequest.borrower_address,
+                invoiceAmount: loanRequest.max_loan,
+                maturityDate: maturityDate
+            });
+
+            res.status(201).json({
+                message: 'Loan request created successfully',
+                data: loanRequest,
+                vault: vaultResult
+            });
+        } catch (vaultError) {
+            console.error('Error creating vault for loan request:', vaultError);
+            // Still return success for loan request, but include vault error
+            res.status(201).json({
+                message: 'Loan request created successfully, but vault creation failed',
+                data: loanRequest,
+                vaultError: vaultError instanceof Error ? vaultError.message : 'Unknown error'
+            });
+        }
     } catch (error) {
         console.error('Error creating loan request:', error);
         res.status(500).json({

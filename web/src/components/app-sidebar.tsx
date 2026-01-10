@@ -12,7 +12,7 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Vault } from "lucide-react"
+import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/stores/userStore"
@@ -41,6 +41,11 @@ export function AppSidebar() {
             title: "Borrower KYB",
             url: "/borrower-kyb",
             icon: Building2,
+        },
+        {
+            title: "Request Loan",
+            url: "/loan-request",
+            icon: Receipt,
         },
         {
             title: "Vaults",
