@@ -93,7 +93,8 @@ export const getLoanRequestByBorrowerAddress = async (req: Request, res: Respons
                 max_loan,
                 not_pledged,
                 assignment_signed,
-                borrower_address
+                borrower_address,
+                status
             FROM "LoanRequests"
             WHERE borrower_address = $1
             ORDER BY created_at DESC
