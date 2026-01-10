@@ -140,10 +140,10 @@ function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
 
             {/* Score display */}
             <div className="mt-4 text-center">
-                <div className="text-3xl font-bold text-foreground">
+                <div className="text-2xl font-bold text-foreground">
                     {score}
                 </div>
-                <div className="text-lg font-medium mt-1" style={{ color: category.color }}>
+                <div className="text-sm font-medium mt-1" style={{ color: category.color }}>
                     {category.label}
                 </div>
             </div>
@@ -181,19 +181,19 @@ export default function LoanDashboardPage() {
                         whileHover={undefined}
                     >
                         <CardHeader>
-                            <CardTitle>Borrower Information</CardTitle>
-                            <CardDescription>
+                            <CardTitle className="text-base">Borrower Information</CardTitle>
+                            <CardDescription className="text-xs">
                                 Your connected wallet address
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-foreground">
+                                <label className="text-xs font-medium text-foreground">
                                     Borrower Address
                                 </label>
                                 {walletAddress ? (
                                     <div className="flex items-center gap-2">
-                                        <div className="flex-1 px-3 py-2 bg-muted rounded-md text-sm text-foreground font-mono break-all">
+                                        <div className="flex-1 px-3 py-2 bg-muted rounded-md text-xs text-foreground font-mono break-all">
                                             {walletAddress}
                                         </div>
                                         <Button
@@ -211,7 +211,7 @@ export default function LoanDashboardPage() {
                                         </Button>
                                     </div>
                                 ) : (
-                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-muted-foreground italic">
+                                    <div className="px-3 py-2 bg-muted rounded-md text-xs text-muted-foreground italic">
                                         {walletsReady && privyReady
                                             ? "No wallet found. Please connect a wallet."
                                             : "Loading wallet information..."}
@@ -226,26 +226,26 @@ export default function LoanDashboardPage() {
                         whileHover={undefined}
                     >
                         <CardHeader>
-                            <CardTitle>Balances</CardTitle>
-                            <CardDescription>
+                            <CardTitle className="text-base">Balances</CardTitle>
+                            <CardDescription className="text-xs">
                                 Your account balances
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">
+                                    <label className="text-xs font-medium text-foreground">
                                         USDC Balance
                                     </label>
-                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
+                                    <div className="px-3 py-2 bg-muted rounded-md text-xs text-foreground">
                                         $0.00
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">
+                                    <label className="text-xs font-medium text-foreground">
                                         Debt
                                     </label>
-                                    <div className="px-3 py-2 bg-muted rounded-md text-sm text-foreground">
+                                    <div className="px-3 py-2 bg-muted rounded-md text-xs text-foreground">
                                         $0.00
                                     </div>
                                 </div>
@@ -258,8 +258,8 @@ export default function LoanDashboardPage() {
                         whileHover={undefined}
                     >
                         <CardHeader>
-                            <CardTitle>Credit Score</CardTitle>
-                            <CardDescription>
+                            <CardTitle className="text-base">Credit Score</CardTitle>
+                            <CardDescription className="text-xs">
                                 Your current credit rating
                             </CardDescription>
                         </CardHeader>
