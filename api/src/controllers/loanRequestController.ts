@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { LoanRequest, LoanRequestBody } from '../models/loanRequest';
-import { validateRequest, validateWalletAddress } from '../validators/loanRequestValidators';
+import { validateRequest } from '../validators/loanRequestValidators';
+import { validateWalletAddress } from '../validators/walletAddressValidator';
 import { sanitizeLoanRequestRequest, sanitizeWalletAddress } from '../utils/sanitize';
 import { vaultService } from '../services/vaultService';
 
