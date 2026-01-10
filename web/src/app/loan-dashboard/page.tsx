@@ -178,9 +178,7 @@ export default function LoanDashboardPage() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card
                         initial={false}
                         whileHover={undefined}
@@ -257,13 +255,10 @@ export default function LoanDashboardPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card
                         initial={false}
                         whileHover={undefined}
-                        className="md:col-span-2"
                     >
                         <CardHeader>
                             <CardTitle>Credit Score</CardTitle>
