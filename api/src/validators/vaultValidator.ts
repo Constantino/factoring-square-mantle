@@ -1,5 +1,6 @@
 // Validation functions
 import {CreateVaultBody} from "../models/vault";
+import {CreateVaultLenderBody} from "../models/vaultLender";
 import {ethers} from "ethers";
 
 const validateRequiredFields = (body: CreateVaultBody): string | null => {
@@ -52,4 +53,60 @@ export const validateRequest = (body: CreateVaultBody): string | null => {
     if (maturityDateError) return maturityDateError;
 
     return null;
+};
+
+// Deposit tracking validation functions
+const validateDepositRequiredFields = (body: CreateVaultLenderBody): string | null => {
+    if (!body.lenderAddress || !body.amount || !body.txHash) {
+        return 'Missing required fields: lenderAddress, amount, txHash';
+    }
+
+    return null;
+};
+
+const validateVaultAddress = (vaultAddress: string): string | null => {
+    if (!vaultAddress || !vaultAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return 'Invalid vault address format';
+    }
+
+    return null;
+};
+
+const validateLenderAddress = (lenderAddress: string): string | null => {
+    if (!lenderAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        return 'Invalid lender address format';
+    }
+
+    return null;
+};
+
+const validateDepositAmount = (amount: number): string | null => {
+    if (amount <= 0) {
+        return 'Amount must be positive';
+    }
+
+    return null;
+};
+
+export const validateTrackDepositRequest = (
+    vaultAddress: string,
+    body: CreateVaultLenderBody
+): string | null => {
+    const requiredFieldsError = validateDepositRequiredFields(body);
+    if (requiredFieldsError) return requiredFieldsError;
+
+    const vaultAddressError = validateVaultAddress(vaultAddress);
+    if (vaultAddressError) return vaultAddressError;
+
+    const lenderAddressError = validateLenderAddress(body.lenderAddress);
+    if (lenderAddressError) return lenderAddressError;
+
+    const amountError = validateDepositAmount(body.amount);
+    if (amountError) return amountError;
+
+    return null;
+};
+
+export const validateVaultLenderRequest = (vaultAddress: string): string | null => {
+    return validateVaultAddress(vaultAddress);
 };

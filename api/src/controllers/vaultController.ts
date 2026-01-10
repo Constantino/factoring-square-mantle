@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { CreateVaultBody } from "../models/vault";
-import { validateRequest } from "../validators/vaultValidator";
+import { CreateVaultLenderBody } from "../models/vaultLender";
+import { validateRequest, validateTrackDepositRequest, validateVaultLenderRequest } from "../validators/vaultValidator";
 import { vaultService } from "../services/vaultService";
 
 export const createVault = async (req: Request, res: Response): Promise<void> => {
@@ -42,6 +43,71 @@ export const getAllVaults = async (req: Request, res: Response): Promise<void> =
         console.error('Error retrieving vaults:', error);
         res.status(500).json({
             error: 'Failed to retrieve vaults',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const trackDeposit = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { vaultAddress } = req.params;
+        const body: CreateVaultLenderBody = req.body;
+
+        // Validate deposit tracking request
+        const validationError = validateTrackDepositRequest(vaultAddress, body);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
+            return;
+        }
+
+        // Record deposit using service
+        const result = await vaultService.trackDeposit(vaultAddress, body);
+        
+        res.status(200).json({
+            message: 'Deposit tracked successfully',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error tracking deposit:', error);
+        
+        // Check for duplicate transaction hash error
+        if (error instanceof Error && error.message.includes('duplicate key')) {
+            res.status(409).json({
+                error: 'Deposit already tracked',
+                details: 'This transaction has already been processed'
+            });
+            return;
+        }
+
+        res.status(500).json({
+            error: 'Failed to track deposit',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const getVaultLenders = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { vaultAddress } = req.params;
+
+        // Validate vault address format
+        const validationError = validateVaultLenderRequest(vaultAddress);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
+            return;
+        }
+
+        const lenders = await vaultService.getVaultLenders(vaultAddress);
+        
+        res.status(200).json({
+            message: 'Lenders retrieved successfully',
+            data: lenders,
+            count: lenders.length
+        });
+    } catch (error) {
+        console.error('Error retrieving lenders:', error);
+        res.status(500).json({
+            error: 'Failed to retrieve lenders',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

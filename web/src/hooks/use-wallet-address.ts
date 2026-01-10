@@ -15,11 +15,20 @@ export function useWalletAddress() {
     const isReady = privyReady && walletsReady;
 
     const walletAddress = useMemo(() => {
-        // Try to get wallet address from connected wallets first
-        if (isReady && wallets && wallets.length > 0) {
-            return wallets[0].address;
-        } else if (user) {
-            // Fallback: check user's linked accounts (embedded wallets)
+        if (!isReady) return null;
+
+        // Priority 1: Look for Privy embedded wallet first
+        if (wallets && wallets.length > 0) {
+            const privyWallet = wallets.find(
+                (w) => w.walletClientType === 'privy'
+            );
+            if (privyWallet) {
+                return privyWallet.address;
+            }
+        }
+
+        // Priority 2: Fallback to user's linked accounts (embedded wallets)
+        if (user) {
             const linkedAccounts = user.linkedAccounts || [];
             const walletAccount = linkedAccounts.find(
                 (account) => account.type === 'wallet'
@@ -29,18 +38,35 @@ export function useWalletAddress() {
                 return walletAccount.address;
             }
         }
+
+        // Priority 3: If no Privy wallet, use first available wallet
+        if (wallets && wallets.length > 0) {
+            return wallets[0].address;
+        }
+
         return null;
     }, [isReady, wallets, user]);
 
     // Debug logging
     useEffect(() => {
         if (isReady) {
+            console.log('=== Wallet Address Debug ===');
             console.log('Wallets ready:', walletsReady);
             console.log('Privy ready:', privyReady);
             console.log('Wallets array:', wallets);
-            console.log('Wallets length:', wallets?.length);
+            console.log('Wallets count:', wallets?.length);
+            if (wallets && wallets.length > 0) {
+                wallets.forEach((w, i) => {
+                    console.log(`Wallet ${i}:`, {
+                        address: w.address,
+                        type: w.walletClientType,
+                        chainId: w.chainId
+                    });
+                });
+            }
             console.log('User:', user);
-            console.log('Wallet Address:', walletAddress);
+            console.log('Selected Wallet Address:', walletAddress);
+            console.log('========================');
         }
     }, [isReady, walletsReady, privyReady, wallets, user, walletAddress]);
 
