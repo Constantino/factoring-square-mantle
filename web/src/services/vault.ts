@@ -1,31 +1,9 @@
 import axios from "axios";
 import { ethers } from "ethers";
 import { VAULT_ABI, ERC20_ABI } from "@/lib/abis";
-
-// Type definitions for Privy wallet
-interface EthereumProvider {
-    request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-}
-
-interface PrivyWallet {
-    getEthereumProvider: () => Promise<EthereumProvider>;
-}
-
-interface NetworkSwitchError {
-    code: number;
-    message: string;
-}
-
-export interface Vault {
-    vault_id: number;
-    vault_address: string;
-    borrower_address: string;
-    vault_name: string;
-    max_capacity: string;
-    current_capacity: string;
-    created_at: string;
-    modified_at: string;
-}
+import {NetworkSwitchError} from "@/types/errors";
+import {PrivyWallet} from "@/types/providers";
+import {Vault} from "@/types/vault";
 
 /**
  * Fetch all available vaults from the API
