@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ParticipateModal } from "@/components/participate-modal";
-import { fetchVaults, participateInVault, type Vault } from "@/services/vault";
+import { fetchVaults, participateInVault} from "@/services/vault";
+import {Vault} from "@/types/vault";
 
 export default function VaultsPage() {
     const [vaults, setVaults] = useState<Vault[]>([]);
@@ -16,6 +17,8 @@ export default function VaultsPage() {
     const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [processingStep, setProcessingStep] = useState("Processing...");
+    const [txHash, setTxHash] = useState<string | null>(null);
     const { wallets } = useWallets();
 
     useEffect(() => {
@@ -74,29 +77,36 @@ export default function VaultsPage() {
         }
 
         setIsProcessing(true);
+        setTxHash(null);
 
         try {
             const wallet = wallets[0];
             
             console.log('Initiating participation...');
             
+            setProcessingStep("Checking allowance...");
+            
             // Call the vault service to participate
             // This will trigger Privy's approval modal for token approval and deposit
-            const txHash = await participateInVault(
+            const hash = await participateInVault(
                 selectedVault.vault_address,
                 amount,
-                wallet
+                wallet,
+                (step: string) => {
+                    setProcessingStep(step);
+                }
             );
 
-            console.log('Transaction successful:', txHash);
+            console.log('Transaction successful:', hash);
+            setTxHash(hash);
             
             // Reload vaults to show updated capacity
             await loadVaults();
             
-            // Close modal only on success
-            setIsModalOpen(false);
+            // Don't close modal - show success with transaction link
         } finally {
             setIsProcessing(false);
+            setProcessingStep("Processing...");
         }
     };
 
@@ -218,9 +228,14 @@ export default function VaultsPage() {
             <ParticipateModal
                 vault={selectedVault}
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setTxHash(null);
+                }}
                 onConfirm={handleConfirmParticipation}
                 isProcessing={isProcessing}
+                processingStep={processingStep}
+                txHash={txHash}
             />
         </div>
     );

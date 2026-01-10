@@ -13,17 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { ErrorPanel } from "@/components/error-panel";
-
-interface Vault {
-    vault_id: number;
-    vault_address: string;
-    borrower_address: string;
-    vault_name: string;
-    max_capacity: string;
-    current_capacity: string;
-    created_at: string;
-    modified_at: string;
-}
+import {Vault} from "@/types/vault";
 
 interface ParticipateModalProps {
     vault: Vault | null;
@@ -31,6 +21,8 @@ interface ParticipateModalProps {
     onClose: () => void;
     onConfirm: (amount: number) => Promise<void>;
     isProcessing?: boolean;
+    processingStep?: string;
+    txHash?: string | null;
 }
 
 export function ParticipateModal({
@@ -39,6 +31,8 @@ export function ParticipateModal({
     onClose,
     onConfirm,
     isProcessing = false,
+    processingStep = "Processing...",
+    txHash = null,
 }: ParticipateModalProps) {
     const [amount, setAmount] = useState<number>(0);
     const [inputValue, setInputValue] = useState<string>("0");
@@ -197,9 +191,24 @@ export function ParticipateModal({
                         onClick={handleConfirm}
                         disabled={amount <= 0 || amount > availableCapacity || isProcessing}
                     >
-                        {isProcessing ? "Processing..." : "Confirm Participation"}
+                        {isProcessing ? processingStep : "Confirm Participation"}
                     </Button>
                 </DialogFooter>
+
+                {/* Success Message with Transaction Link */}
+                {txHash && (
+                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-md mt-4">
+                        <p className="text-sm text-green-600 font-medium mb-2">✓ Deposit successful!</p>
+                        <a
+                            href={`https://explorer.sepolia.mantle.xyz/tx/${txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-green-600 hover:text-green-700 underline break-all"
+                        >
+                            View transaction: {txHash}
+                        </a>
+                    </div>
+                )}
 
                 {/* Error Display - Below Buttons */}
                 <ErrorPanel

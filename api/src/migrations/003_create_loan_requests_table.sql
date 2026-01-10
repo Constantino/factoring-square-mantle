@@ -1,3 +1,6 @@
+-- Drop existing table if it exists (with CASCADE to drop dependent objects)
+DROP TABLE IF EXISTS "LoanRequests" CASCADE;
+
 -- Create LoanRequests table
 CREATE TABLE IF NOT EXISTS "LoanRequests" (
     id SERIAL PRIMARY KEY,
@@ -37,4 +40,3 @@ CREATE TRIGGER update_loan_requests_modified_at
     BEFORE UPDATE ON "LoanRequests"
     FOR EACH ROW
     EXECUTE FUNCTION update_modified_at_column();
-

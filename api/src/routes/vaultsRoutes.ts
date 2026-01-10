@@ -7,4 +7,8 @@ const router: Router = express.Router();
 router.get('/', vc.getAllVaults);
 router.post('/', vc.createVault);
 
+// Deposit routes
+router.post('/:vaultAddress/deposit', vc.recordDeposit);
+router.get('/:vaultAddress/lenders', vc.getVaultLenders);
+
 export default router;

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { ethers } from "ethers";
-import { VAULT_ABI, ERC20_ABI } from "@/lib/abis";
+import { VAULT_ABI } from "@/app/abi/Vault";
+import { ERC20_ABI } from "@/app/abi/ERC20";
 import {NetworkSwitchError} from "@/types/errors";
 import {PrivyWallet} from "@/types/providers";
 import {Vault} from "@/types/vault";
@@ -33,18 +34,23 @@ export async function fetchVaults(): Promise<Vault[]> {
  * @param vaultAddress - The address of the vault contract
  * @param amount - The amount to deposit (in USD, will be converted to wei)
  * @param wallet - The Privy wallet object
+ * @param onProgress - Optional callback to report progress
  * @returns Promise with transaction hash
  */
 export async function participateInVault(
     vaultAddress: string,
     amount: number,
-    wallet: PrivyWallet
+    wallet: PrivyWallet,
+    onProgress?: (step: string) => void
 ): Promise<string> {
     try {
+        onProgress?.("Connecting to wallet...");
+        
         // Get the Ethereum provider from Privy wallet
         const provider = await wallet.getEthereumProvider();
         
         // Check current network
+        onProgress?.("Checking network...");
         const network = await provider.request({ method: 'eth_chainId' }) as string;
         const targetChainId = `0x${parseInt(process.env.NEXT_PUBLIC_MANTLE_SEPOLIA_CHAIN_ID || '5003').toString(16)}`;
         
@@ -52,6 +58,7 @@ export async function participateInVault(
         
         // Switch to Mantle Sepolia if needed
         if (network !== targetChainId) {
+            onProgress?.("Switching to Mantle Sepolia...");
             console.log('Switching to Mantle Sepolia...');
             try {
                 await provider.request({
@@ -108,15 +115,18 @@ export async function participateInVault(
         const tokenContract = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
 
         // Check current allowance
+        onProgress?.("Checking allowance...");
         const currentAllowance = await tokenContract.allowance(userAddress, vaultAddress);
         console.log('Current allowance:', currentAllowance.toString());
 
         // Approve vault to spend tokens if needed
         if (currentAllowance < amountInWei) {
+            onProgress?.("Requesting approval...");
             console.log('Approving vault to spend tokens...');
             const approveTx = await tokenContract.approve(vaultAddress, amountInWei);
             console.log('Approval transaction sent:', approveTx.hash);
             
+            onProgress?.("Waiting for approval confirmation...");
             // Wait for approval transaction to be mined
             await approveTx.wait();
             console.log('Approval confirmed');
@@ -126,14 +136,39 @@ export async function participateInVault(
         const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
 
         // Deposit into vault
+        onProgress?.("Depositing into vault...");
         console.log('Depositing into vault...');
         const depositTx = await vaultContract.deposit(amountInWei, userAddress);
         console.log('Deposit transaction sent:', depositTx.hash);
 
+        onProgress?.("Waiting for deposit confirmation...");
         // Wait for deposit transaction to be mined
         const receipt = await depositTx.wait();
         console.log('Deposit confirmed in block:', receipt.blockNumber);
 
+        onProgress?.("Success!");
+        
+        // Record deposit in backend database
+        try {
+            onProgress?.("Recording deposit...");
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const fullUrl = apiUrl.startsWith('http') ? apiUrl : `http://${apiUrl}`;
+            
+            await axios.post(
+                `${fullUrl}/vaults/${vaultAddress}/deposit`,
+                {
+                    lenderAddress: userAddress,
+                    amount: amount,
+                    txHash: depositTx.hash
+                }
+            );
+            console.log('Deposit recorded in database');
+        } catch (dbError) {
+            // Log error but don't fail the transaction
+            console.error('Failed to record deposit in database:', dbError);
+            // Transaction succeeded on-chain, so we still return the hash
+        }
+        
         return depositTx.hash;
     } catch (error) {
         console.error("Error participating in vault:", error);
