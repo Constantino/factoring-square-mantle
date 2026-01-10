@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -30,48 +31,29 @@ jobs:
       - name: Create deployment package
         run: tar -czf deploy.tar.gz dist package.json package-lock.json
 
-      - name: Copy and deploy
+      - name: Copy deployment package
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > private_key
+          chmod 600 private_key
+          scp -i private_key -o StrictHostKeyChecking=no deploy.tar.gz ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/api/
+          rm -f private_key
+
+      - name: Deploy and restart
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            set -e  # Exit on any error
-            
-            # Create directory if doesn't exist
-            mkdir -p /home/ubuntu/api
-            cd /home/ubuntu/api
-            
-            # Remove old files
-            rm -rf dist package.json package-lock.json deploy.tar.gz
-            
-            # Stop here - we'll copy in next step
-
-      - name: Upload deployment package
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "deploy.tar.gz"
-          target: "/home/ubuntu/api"
-
-      - name: Extract and restart
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e  # Exit on any error
+            set -e
             
             cd /home/ubuntu/api
             
             # Extract files
             tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
             
-            # Verify files exist
+            # Verify files
             if [ ! -f package.json ]; then
               echo "ERROR: package.json not found!"
               exit 1
@@ -88,10 +70,8 @@ jobs:
             FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             EOF
             
-            # Install dependencies
+            # Install and restart
             npm install --omit=dev
-            
-            # Restart PM2
             pm2 restart api || pm2 start npm --name "api" -- start
             pm2 save
             
