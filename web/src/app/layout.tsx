@@ -26,6 +26,59 @@ const privyConfig: PrivyClientConfig = {
         ethereum: {
             createOnLogin: 'users-without-wallets'
         }
+    },
+    // Add Mantle Sepolia support
+    supportedChains: [
+        {
+            id: 5003,
+            name: 'Mantle Sepolia',
+            network: 'mantle-sepolia',
+            nativeCurrency: {
+                name: 'MNT',
+                symbol: 'MNT',
+                decimals: 18,
+            },
+            rpcUrls: {
+                default: {
+                    http: ['https://rpc.sepolia.mantle.xyz'],
+                },
+                public: {
+                    http: ['https://rpc.sepolia.mantle.xyz'],
+                },
+            },
+            blockExplorers: {
+                default: {
+                    name: 'Mantle Sepolia Explorer',
+                    url: 'https://explorer.sepolia.mantle.xyz',
+                },
+            },
+            testnet: true,
+        }
+    ],
+    defaultChain: {
+        id: 5003,
+        name: 'Mantle Sepolia',
+        network: 'mantle-sepolia',
+        nativeCurrency: {
+            name: 'MNT',
+            symbol: 'MNT',
+            decimals: 18,
+        },
+        rpcUrls: {
+            default: {
+                http: ['https://rpc.sepolia.mantle.xyz'],
+            },
+            public: {
+                http: ['https://rpc.sepolia.mantle.xyz'],
+            },
+        },
+        blockExplorers: {
+            default: {
+                name: 'Mantle Sepolia Explorer',
+                url: 'https://explorer.sepolia.mantle.xyz',
+            },
+        },
+        testnet: true,
     }
 }
 

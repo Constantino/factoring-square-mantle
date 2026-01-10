@@ -29,6 +29,7 @@ interface ParticipateModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: (amount: number) => void;
+    isProcessing?: boolean;
 }
 
 export function ParticipateModal({
@@ -36,6 +37,7 @@ export function ParticipateModal({
     isOpen,
     onClose,
     onConfirm,
+    isProcessing = false,
 }: ParticipateModalProps) {
     const [amount, setAmount] = useState<number>(0);
     const [inputValue, setInputValue] = useState<string>("0");
@@ -132,6 +134,7 @@ export function ParticipateModal({
                                 min="0"
                                 max={availableCapacity}
                                 step="0.01"
+                                disabled={isProcessing}
                             />
                         </div>
                     </div>
@@ -145,6 +148,7 @@ export function ParticipateModal({
                                 size="sm"
                                 onClick={handleMaxClick}
                                 className="h-7 px-3 text-xs"
+                                disabled={isProcessing}
                             >
                                 MAX
                             </Button>
@@ -155,6 +159,7 @@ export function ParticipateModal({
                             max={availableCapacity}
                             step={0.01}
                             className="w-full"
+                            disabled={isProcessing}
                         />
                         <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>$0</span>
@@ -164,14 +169,18 @@ export function ParticipateModal({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button 
+                        variant="outline" 
+                        onClick={onClose}
+                        disabled={isProcessing}
+                    >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleConfirm}
-                        disabled={amount <= 0 || amount > availableCapacity}
+                        disabled={amount <= 0 || amount > availableCapacity || isProcessing}
                     >
-                        Confirm Participation
+                        {isProcessing ? "Processing..." : "Confirm Participation"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
