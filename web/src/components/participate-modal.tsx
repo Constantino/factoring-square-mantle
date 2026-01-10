@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -49,14 +49,13 @@ export function ParticipateModal({
         ? parseFloat(vault.max_capacity) - parseFloat(vault.current_capacity)
         : 0;
 
-    // Reset amount when vault changes or modal opens
-    useEffect(() => {
-        if (isOpen && vault) {
-            setAmount(0);
-            setInputValue("0");
-            setError(null);
-        }
-    }, [isOpen, vault]);
+    // Handle close - reset state when closing
+    const handleClose = () => {
+        setAmount(0);
+        setInputValue("0");
+        setError(null);
+        onClose();
+    };
 
     // Handle slider change
     const handleSliderChange = (value: number[]) => {
@@ -106,7 +105,7 @@ export function ParticipateModal({
     if (!vault) return null;
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent 
                 className="sm:max-w-[500px]"
                 onInteractOutside={(e) => e.preventDefault()}
@@ -189,7 +188,7 @@ export function ParticipateModal({
                 <DialogFooter>
                     <Button 
                         variant="outline" 
-                        onClick={onClose}
+                        onClick={handleClose}
                         disabled={isProcessing}
                     >
                         Cancel

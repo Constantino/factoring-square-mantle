@@ -2,6 +2,20 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { VAULT_ABI, ERC20_ABI } from "@/lib/abis";
 
+// Type definitions for Privy wallet
+interface EthereumProvider {
+    request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+interface PrivyWallet {
+    getEthereumProvider: () => Promise<EthereumProvider>;
+}
+
+interface NetworkSwitchError {
+    code: number;
+    message: string;
+}
+
 export interface Vault {
     vault_id: number;
     vault_address: string;
@@ -46,14 +60,14 @@ export async function fetchVaults(): Promise<Vault[]> {
 export async function participateInVault(
     vaultAddress: string,
     amount: number,
-    wallet: any
+    wallet: PrivyWallet
 ): Promise<string> {
     try {
         // Get the Ethereum provider from Privy wallet
         const provider = await wallet.getEthereumProvider();
         
         // Check current network
-        const network = await provider.request({ method: 'eth_chainId' });
+        const network = await provider.request({ method: 'eth_chainId' }) as string;
         const targetChainId = `0x${parseInt(process.env.NEXT_PUBLIC_MANTLE_SEPOLIA_CHAIN_ID || '5003').toString(16)}`;
         
         console.log('Current network:', network, 'Target:', targetChainId);
@@ -66,9 +80,10 @@ export async function participateInVault(
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: targetChainId }],
                 });
-            } catch (switchError: any) {
+            } catch (switchError) {
                 // Chain not added, try to add it
-                if (switchError.code === 4902) {
+                const error = switchError as NetworkSwitchError;
+                if (error.code === 4902) {
                     await provider.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
