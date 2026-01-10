@@ -4,6 +4,7 @@ import * as loanRequestController from '../controllers/loanRequestController';
 const router: Router = express.Router();
 
 // Loan request routes
+router.get('/borrower/:borrowerAddress', loanRequestController.getLoanRequestByBorrowerAddress);
 router.get('/:id', loanRequestController.getLoanRequestById);
 router.post('/', loanRequestController.createLoanRequest);
 
