@@ -49,7 +49,7 @@ export function AppSidebar() {
         },
         {
             title: "My loans",
-            url: "/loan-dashboard",
+            url: "/borrowers/loans",
             icon: CreditCard,
         },
         {
