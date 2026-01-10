@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { LoanRequest, LoanRequestBody } from '../models/loanRequest';
-import { validateRequest } from '../validators/loanRequestValidators';
-import { sanitizeLoanRequestRequest } from '../utils/sanitize';
+import { validateRequest, validateWalletAddress } from '../validators/loanRequestValidators';
+import { sanitizeLoanRequestRequest, sanitizeWalletAddress } from '../utils/sanitize';
 import { vaultService } from '../services/vaultService';
 
 const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> => {
@@ -58,6 +58,61 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
     ]);
 
     return result.rows[0];
+};
+
+export const getLoanRequestByBorrowerAddress = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { borrowerAddress } = req.params;
+
+        // Sanitize input
+        const sanitizedAddress = sanitizeWalletAddress(borrowerAddress);
+
+        // Validate input
+        const validationError = validateWalletAddress(sanitizedAddress);
+        if (validationError) {
+            res.status(400).json({
+                error: validationError
+            });
+            return;
+        }
+
+        // Query database
+        const query = `
+            SELECT 
+                id,
+                created_at,
+                modified_at,
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                term,
+                customer_name,
+                delivery_completed,
+                advance_rate,
+                monthly_interest_rate,
+                max_loan,
+                not_pledged,
+                assignment_signed,
+                borrower_address
+            FROM "LoanRequests"
+            WHERE borrower_address = $1
+            ORDER BY created_at DESC
+        `;
+
+        const result = await pool.query<LoanRequest>(query, [sanitizedAddress]);
+
+        res.status(200).json({
+            message: 'Loan requests retrieved successfully',
+            data: result.rows,
+            count: result.rows.length
+        });
+    } catch (error) {
+        console.error('Error retrieving loan requests by borrower address:', error);
+        res.status(500).json({
+            error: 'Failed to retrieve loan requests',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
 };
 
 export const getLoanRequestById = async (req: Request, res: Response): Promise<void> => {
