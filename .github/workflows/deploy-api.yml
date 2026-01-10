@@ -1,14 +1,16 @@
-name: Deploy API to EC2
+name: Deploy API
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
 
     steps:
       - name: Checkout code
@@ -17,45 +19,80 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Install dependencies
         run: npm install
-        working-directory: ./api
 
       - name: Build
         run: npm run build
-        working-directory: ./api
 
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "api/dist,api/package.json,api/package-lock.json"
-          target: "/home/ubuntu/api"
-          overwrite: true
+      - name: Create deployment package
+        run: tar -czf deploy.tar.gz dist package.json package-lock.json
 
-      - name: Deploy and restart
+      - name: Copy and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e  # Exit on any error
+            
+            # Create directory if doesn't exist
+            mkdir -p /home/ubuntu/api
             cd /home/ubuntu/api
+            
+            # Remove old files
+            rm -rf dist package.json package-lock.json deploy.tar.gz
+            
+            # Stop here - we'll copy in next step
 
-            # Create .env from GitHub secrets
-            cat > .env << EOF
+      - name: Upload deployment package
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy.tar.gz"
+          target: "/home/ubuntu/api"
+
+      - name: Extract and restart
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e  # Exit on any error
+            
+            cd /home/ubuntu/api
+            
+            # Extract files
+            tar -xzf deploy.tar.gz
+            
+            # Verify files exist
+            if [ ! -f package.json ]; then
+              echo "ERROR: package.json not found!"
+              exit 1
+            fi
+            
+            # Create .env
+            cat > .env << 'EOF'
             PORT=${{ secrets.PORT }}
             DATABASE_CONNECTION_STRING=${{ secrets.DATABASE_CONNECTION_STRING }}
             RPC_URL=${{ secrets.RPC_URL }}
             PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
             VAULT_FACTORY_ADDRESS=${{ secrets.VAULT_FACTORY_ADDRESS }}
             USDC_ADDRESS=${{ secrets.USDC_ADDRESS }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             EOF
-
-            npm install --production
+            
+            # Install dependencies
+            npm install --omit=dev
+            
+            # Restart PM2
             pm2 restart api || pm2 start npm --name "api" -- start
             pm2 save
+            
+            echo "✅ Deployment successful!"
