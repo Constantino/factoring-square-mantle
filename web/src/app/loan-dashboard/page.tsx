@@ -182,9 +182,6 @@ export default function LoanDashboardPage() {
                     >
                         <CardHeader>
                             <CardTitle className="text-base">Borrower Information</CardTitle>
-                            <CardDescription className="text-xs">
-                                Your connected wallet address
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
@@ -227,9 +224,6 @@ export default function LoanDashboardPage() {
                     >
                         <CardHeader>
                             <CardTitle className="text-base">Balances</CardTitle>
-                            <CardDescription className="text-xs">
-                                Your account balances
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -259,9 +253,6 @@ export default function LoanDashboardPage() {
                     >
                         <CardHeader>
                             <CardTitle className="text-base">Credit Score</CardTitle>
-                            <CardDescription className="text-xs">
-                                Your current credit rating
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <CreditScoreGauge score={creditScore} />
