@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ParticipateModal } from "@/components/participate-modal";
 
 interface Vault {
     vault_id: number;
@@ -20,6 +22,8 @@ export default function VaultsPage() {
     const [vaults, setVaults] = useState<Vault[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchVaults();
@@ -75,6 +79,17 @@ export default function VaultsPage() {
     const truncateAddress = (address: string) => {
         if (!address) return "";
         return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    };
+
+    const handleParticipate = (vault: Vault) => {
+        setSelectedVault(vault);
+        setIsModalOpen(true);
+    };
+
+    const handleConfirmParticipation = (amount: number) => {
+        // TODO: Implement actual participation logic with smart contract
+        console.log('Participating in vault:', selectedVault?.vault_id, 'with amount:', amount);
+        // Here you would call your smart contract to participate in the vault
     };
 
     return (
@@ -176,12 +191,28 @@ export default function VaultsPage() {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Participate Button */}
+                                    <Button 
+                                        className="w-full mt-2"
+                                        onClick={() => handleParticipate(vault)}
+                                    >
+                                        Participate
+                                    </Button>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Participate Modal */}
+            <ParticipateModal
+                vault={selectedVault}
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={handleConfirmParticipation}
+            />
         </div>
     );
 }
