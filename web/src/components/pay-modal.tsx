@@ -92,7 +92,7 @@ export function PayModal({
                     {/* Max Amount Information */}
                     {maxAmount !== undefined && (
                         <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Maximum Amount</p>
+                            <p className="text-xs text-muted-foreground">Debt</p>
                             <p className="text-lg font-semibold">
                                 {formatCurrency(maxAmount)}
                             </p>
