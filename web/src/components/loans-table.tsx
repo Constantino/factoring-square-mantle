@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoansTableProps } from "@/types/loan";
-import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus } from "@/lib/format";
+import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, formatWalletAddress } from "@/lib/format";
 
 export function LoansTable({
     loanRequests,
@@ -102,7 +102,7 @@ export function LoansTable({
                                             {formatCurrency(request.max_loan)}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground font-mono">
-                                            {request.vault_address || "N/A"}
+                                            {request.vault_address ? formatWalletAddress(request.vault_address) : "N/A"}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
                                             <span className={`px-2 py-1 rounded-full ${getStatusBadgeClass(request.status)}`}>

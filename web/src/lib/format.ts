@@ -68,3 +68,29 @@ export function formatStatus(status: string): string {
         .join(' ');
 }
 
+/**
+ * Shortens a wallet address to a more readable format
+ * @param address - The wallet address (e.g., "0x1234567890abcdef1234567890abcdef12345678")
+ * @param startLength - Number of characters to show at the start (default: 6)
+ * @param endLength - Number of characters to show at the end (default: 4)
+ * @returns Shortened address string (e.g., "0x1234...5678")
+ */
+export function formatWalletAddress(
+    address: string,
+    startLength: number = 5,
+    endLength: number = 4
+): string {
+    if (!address) {
+        return '';
+    }
+
+    // If address is too short, return as is
+    if (address.length <= startLength + endLength) {
+        return address;
+    }
+
+    const start = address.slice(0, startLength);
+    const end = address.slice(-endLength);
+    return `${start}...${end}`;
+}
+
