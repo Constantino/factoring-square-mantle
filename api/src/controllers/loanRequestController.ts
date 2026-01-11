@@ -61,24 +61,44 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
     return result.rows[0];
 };
 
-export const getLoanRequestByBorrowerAddress = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { borrowerAddress } = req.params;
-
-        // Sanitize input
-        const sanitizedAddress = sanitizeWalletAddress(borrowerAddress);
-
-        // Validate input
-        const validationError = validateWalletAddress(sanitizedAddress);
-        if (validationError) {
-            res.status(400).json({
-                error: validationError
-            });
-            return;
-        }
-
-        // Query database
-        const query = `
+const getLoanRequestsByBorrowerAddressQuery = async (
+    borrowerAddress: string,
+    includeVaults: boolean
+): Promise<any[]> => {
+    // Query database - conditionally join with Vaults if includeVaults is true
+    const query = includeVaults
+        ? `
+            SELECT 
+                lr.id,
+                lr.created_at,
+                lr.modified_at,
+                lr.invoice_number,
+                lr.invoice_amount,
+                lr.invoice_due_date,
+                lr.term,
+                lr.customer_name,
+                lr.delivery_completed,
+                lr.advance_rate,
+                lr.monthly_interest_rate,
+                lr.max_loan,
+                lr.not_pledged,
+                lr.assignment_signed,
+                lr.borrower_address,
+                lr.status,
+                v.vault_id,
+                v.vault_address,
+                v.vault_name,
+                v.max_capacity,
+                v.current_capacity,
+                v.loan_request_id,
+                v.created_at as vault_created_at,
+                v.modified_at as vault_modified_at
+            FROM "LoanRequests" lr
+            INNER JOIN "Vaults" v ON v.loan_request_id = lr.id
+            WHERE lr.borrower_address = $1
+            ORDER BY lr.created_at DESC
+        `
+        : `
             SELECT 
                 id,
                 created_at,
@@ -101,12 +121,39 @@ export const getLoanRequestByBorrowerAddress = async (req: Request, res: Respons
             ORDER BY created_at DESC
         `;
 
-        const result = await pool.query<LoanRequest>(query, [sanitizedAddress]);
+    const result = await pool.query(query, [borrowerAddress]);
+    return result.rows;
+};
+
+export const getLoanRequestByBorrowerAddress = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { borrowerAddress } = req.params;
+        const { include } = req.query;
+
+        // Sanitize input
+        const sanitizedAddress = sanitizeWalletAddress(borrowerAddress);
+
+        // Validate input
+        const validationError = validateWalletAddress(sanitizedAddress);
+        if (validationError) {
+            res.status(400).json({
+                error: validationError
+            });
+            return;
+        }
+
+        // Check if vaults should be included
+        const includeVaults = include === 'vaults';
+
+        // Query database
+        const rows = await getLoanRequestsByBorrowerAddressQuery(sanitizedAddress, includeVaults);
 
         res.status(200).json({
-            message: 'Loan requests retrieved successfully',
-            data: result.rows,
-            count: result.rows.length
+            message: includeVaults
+                ? 'Loan requests with vault info retrieved successfully'
+                : 'Loan requests retrieved successfully',
+            data: rows,
+            count: rows.length
         });
     } catch (error) {
         console.error('Error retrieving loan requests by borrower address:', error);
