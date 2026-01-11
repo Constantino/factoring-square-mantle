@@ -54,7 +54,7 @@ export const trackDeposit = async (req: Request, res: Response): Promise<void> =
         const body: CreateVaultLenderBody = req.body;
 
         // Validate deposit tracking request
-        const validationError = validateTrackDepositRequest(vaultAddress, body);
+        const validationError = validateDepositTracking(vaultAddress, body);
         if (validationError) {
             res.status(400).json({ error: validationError });
             return;
@@ -91,7 +91,7 @@ export const getVaultLenders = async (req: Request, res: Response): Promise<void
         const { vaultAddress } = req.params;
 
         // Validate vault address format
-        const validationError = validateVaultLenderRequest(vaultAddress);
+        const validationError = validateVaultAddressParam(vaultAddress);
         if (validationError) {
             res.status(400).json({ error: validationError });
             return;
