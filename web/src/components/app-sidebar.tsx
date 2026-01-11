@@ -72,7 +72,7 @@ export function AppSidebar() {
             roles: ['Admin', 'Lender'],
         },
         {
-            title: "Portafolio",
+            title: "Portfolio",
             url: "/lenders/loans",
             icon: Wallet,
             roles: ['Admin', 'Lender'],

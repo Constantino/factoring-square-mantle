@@ -113,7 +113,7 @@ export const getVaultLenders = async (req: Request, res: Response): Promise<void
     }
 };
 
-export const getLendsByLender = async (req: Request, res: Response): Promise<void> => {
+export const getPortfolioByLender = async (req: Request, res: Response): Promise<void> => {
     try {
         const { lenderAddress } = req.params;
 
@@ -124,17 +124,17 @@ export const getLendsByLender = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        const lends = await vaultService.getLendsByLender(lenderAddress);
+        const portfolio = await vaultService.getPortfolioByLender(lenderAddress);
         
         res.status(200).json({
-            message: 'Lender participations retrieved successfully',
-            data: lends,
-            count: lends.length
+            message: 'Lender portfolio retrieved successfully',
+            data: portfolio,
+            count: portfolio.length
         });
     } catch (error) {
-        console.error('Error retrieving lender participations:', error);
+        console.error('Error retrieving lender portfolio:', error);
         res.status(500).json({
-            error: 'Failed to retrieve lender participations',
+            error: 'Failed to retrieve lender portfolio',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

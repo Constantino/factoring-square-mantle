@@ -7,8 +7,8 @@ const router: Router = express.Router();
 router.get('/', vc.getAllVaults);
 router.post('/', vc.createVault);
 
-// Lender routes
-router.get('/lender/:lenderAddress/participations', vc.getLendsByLender);
+// Lender portfolio routes
+router.get('/lender/:lenderAddress', vc.getPortfolioByLender);
 
 // Deposit routes
 router.post('/:vaultAddress/deposit', vc.trackDeposit);

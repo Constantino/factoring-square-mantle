@@ -7,7 +7,7 @@ export interface Vault {
     current_capacity: string;
     created_at: string;
     modified_at: string;
-}export interface LenderParticipation {
+}export interface LenderPortfolio {
     lender_id: number;
     lender_address: string;
     amount: string;

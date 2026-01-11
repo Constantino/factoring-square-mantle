@@ -4,7 +4,7 @@ import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import {NetworkSwitchError} from "@/types/errors";
 import {PrivyWallet} from "@/types/providers";
-import {Vault, LenderParticipation} from "@/types/vault";
+import {Vault, LenderPortfolio} from "@/types/vault";
 
 /**
  * Fetch all available vaults from the API
@@ -193,12 +193,12 @@ export async function participateInVault(
 }
 
 /**
- * Fetch all participations for a lender
+ * Fetch lender portfolio
  * @param lenderAddress - The address of the lender
- * @returns Promise with array of participations
+ * @returns Promise with array of portfolio items
  * @throws Error if the API call fails
  */
-export async function fetchLenderParticipations(lenderAddress: string): Promise<LenderParticipation[]> {
+export async function fetchLenderPortfolio(lenderAddress: string): Promise<LenderPortfolio[]> {
     let apiUrl = process.env.NEXT_PUBLIC_API_URL;
     
     if (!apiUrl) {
@@ -213,6 +213,6 @@ export async function fetchLenderParticipations(lenderAddress: string): Promise<
     // Remove trailing slash if present
     apiUrl = apiUrl.replace(/\/$/, "");
 
-    const response = await axios.get(`${apiUrl}/vaults/lender/${lenderAddress}/participations`);
+    const response = await axios.get(`${apiUrl}/vaults/lender/${lenderAddress}`);
     return response.data.data || [];
 }

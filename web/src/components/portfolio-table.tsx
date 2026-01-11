@@ -1,43 +1,20 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LenderParticipation } from "@/types/vault";
+import { LenderPortfolio } from "@/types/vault";
+import { formatCurrency, formatDate, truncateAddress, formatCapacityPercentage } from "@/lib/format";
 
-interface ParticipationsTableProps {
-    participations: LenderParticipation[];
+interface PortfolioTableProps {
+    portfolio: LenderPortfolio[];
     isLoading: boolean;
     error: string | null;
 }
 
-export function ParticipationsTable({
-    participations,
+export function PortfolioTable({
+    portfolio,
     isLoading,
     error,
-}: ParticipationsTableProps) {
-    const formatCurrency = (value: string) => {
-        return `$${parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
-
-    const truncateAddress = (address: string) => {
-        if (!address) return "";
-        return `${address.slice(0, 6)}...${address.slice(-4)}`;
-    };
-
-    const getCapacityPercentage = (current: string, max: string) => {
-        const currentNum = parseFloat(current);
-        const maxNum = parseFloat(max);
-        return ((currentNum / maxNum) * 100).toFixed(1);
-    };
+}: PortfolioTableProps) {
 
     return (
         <Card
@@ -45,7 +22,7 @@ export function ParticipationsTable({
             whileHover={undefined}
         >
             <CardHeader>
-                <CardTitle className="text-base">Portafolio</CardTitle>
+                <CardTitle className="text-base">Portfolio</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -82,7 +59,7 @@ export function ParticipationsTable({
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={8} className="py-8 px-4 text-center text-xs text-muted-foreground">
-                                        Loading participations...
+                                        Loading portfolio...
                                     </td>
                                 </tr>
                             ) : error ? (
@@ -91,7 +68,7 @@ export function ParticipationsTable({
                                         {error}
                                     </td>
                                 </tr>
-                            ) : participations.length === 0 ? (
+                            ) : portfolio.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="py-12 px-4 text-center">
                                         <p className="text-sm text-muted-foreground mb-2">
@@ -103,37 +80,37 @@ export function ParticipationsTable({
                                     </td>
                                 </tr>
                             ) : (
-                                participations.map((participation) => (
-                                    <tr key={participation.lender_id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                                portfolio.map((item) => (
+                                    <tr key={item.lender_id} className="border-b border-border hover:bg-muted/50 transition-colors">
                                         <td className="py-3 px-4 text-xs text-foreground">
-                                            {participation.vault_name}
+                                            {item.vault_name}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground font-mono">
-                                            {truncateAddress(participation.vault_address)}
+                                            {truncateAddress(item.vault_address)}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground font-mono">
-                                            {truncateAddress(participation.borrower_address)}
+                                            {truncateAddress(item.borrower_address)}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground font-semibold">
-                                            {formatCurrency(participation.amount)}
+                                            {formatCurrency(parseFloat(item.amount))}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
-                                            {formatCurrency(participation.current_capacity)} / {formatCurrency(participation.max_capacity)}
+                                            {formatCurrency(parseFloat(item.current_capacity))} / {formatCurrency(parseFloat(item.max_capacity))}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
-                                            {getCapacityPercentage(participation.current_capacity, participation.max_capacity)}%
+                                            {formatCapacityPercentage(item.current_capacity, item.max_capacity)}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
-                                            {formatDate(participation.created_at)}
+                                            {formatDate(item.created_at)}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground font-mono">
                                             <a
-                                                href={`https://explorer.sepolia.mantle.xyz/tx/${participation.tx_hash}`}
+                                                href={`https://explorer.sepolia.mantle.xyz/tx/${item.tx_hash}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-blue-500 hover:text-blue-700 underline"
                                             >
-                                                {truncateAddress(participation.tx_hash)}
+                                                {truncateAddress(item.tx_hash)}
                                             </a>
                                         </td>
                                     </tr>

@@ -226,7 +226,7 @@ export class VaultService {
         return result.rows;
     }
 
-    async getLendsByLender(lenderAddress: string): Promise<any[]> {
+    async getPortfolioByLender(lenderAddress: string): Promise<any[]> {
         const query = `
             SELECT 
                 vl.lender_id,
