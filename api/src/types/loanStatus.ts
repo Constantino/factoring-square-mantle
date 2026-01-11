@@ -6,4 +6,4 @@ export enum LoanStatus {
     DEFAULTED = 'DEFAULTED'
 }
 
-export type VaultStatusType = LoanStatus;
+export type LoanStatusType = LoanStatus;
