@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorPanel } from "@/components/error-panel";
 import { formatCurrency } from "@/lib/format";
-import { PayModalProps } from "@/types/modal";
+import { PayModalProps } from "@/types/payModalProps";
 
 export function PayModal({
     isOpen,
