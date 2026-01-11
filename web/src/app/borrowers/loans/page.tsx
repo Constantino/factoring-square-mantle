@@ -105,6 +105,7 @@ export default function LoanDashboardPage() {
                 loanRequest.vault_address,
                 amount,
                 wallet,
+                loanRequest.id,
                 onProgress
             );
 

@@ -52,6 +52,7 @@ export async function getLoanRequestsByBorrowerWithVaults(
  * @param vaultAddress - The address of the vault contract
  * @param amount - The amount to repay (in USD, will be converted to wei)
  * @param wallet - The Privy wallet object
+ * @param loanRequestId - The ID of the loan request to update status
  * @param onProgress - Optional callback to report progress
  * @returns Promise with transaction hash
  * @throws Error if the repayment fails
@@ -60,6 +61,7 @@ export async function repayLoan(
     vaultAddress: string,
     amount: number,
     wallet: PrivyWallet,
+    loanRequestId: number,
     onProgress?: (step: string) => void
 ): Promise<string> {
     try {
@@ -173,9 +175,52 @@ export async function repayLoan(
         // Create vault contract instance
         const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
 
+        // Validate vault state and borrower before repayment
+        onProgress?.("Validating vault state...");
+        const [vaultState, borrowerAddress] = await Promise.all([
+            vaultContract.state(),
+            vaultContract.BORROWER()
+        ]);
+
+        console.log('Vault state:', vaultState.toString());
+        console.log('Borrower address:', borrowerAddress);
+        console.log('User address:', userAddress);
+
+        // State enum: 0 = FUNDING, 1 = ACTIVE, 2 = REPAID
+        if (vaultState !== BigInt(1)) {
+            const stateNames = ['FUNDING', 'ACTIVE', 'REPAID'];
+            throw new Error(
+                `Vault is not in ACTIVE state. Current state: ${stateNames[Number(vaultState)]}. ` +
+                `The vault must be fully funded and funds must be released before repayment.`
+            );
+        }
+
+        // Check if user is the borrower
+        if (borrowerAddress.toLowerCase() !== userAddress.toLowerCase()) {
+            throw new Error(
+                `Only the borrower can repay the loan. ` +
+                `Expected borrower: ${borrowerAddress}, but connected wallet: ${userAddress}`
+            );
+        }
+
         // Repay loan
         onProgress?.("Step 2/2: Repaying loan...");
         console.log('Repaying loan...');
+
+        // Use estimateGas to get better error messages
+        try {
+            await vaultContract.repay.estimateGas(amountInWei);
+        } catch (estimateError: any) {
+            console.error('Gas estimation failed:', estimateError);
+            // Try to extract a meaningful error message
+            if (estimateError.reason) {
+                throw new Error(`Repayment validation failed: ${estimateError.reason}`);
+            } else if (estimateError.data) {
+                throw new Error(`Repayment validation failed. Check vault state and borrower address.`);
+            }
+            throw new Error(`Repayment validation failed: ${estimateError.message || 'Unknown error'}`);
+        }
+
         const repayTx = await vaultContract.repay(amountInWei);
         console.log('Repayment transaction sent:', repayTx.hash);
 
@@ -185,6 +230,21 @@ export async function repayLoan(
         console.log('Repayment confirmed in block:', receipt.blockNumber);
 
         onProgress?.("✅ Repayment successful!");
+
+        // Update loan status to PAID after successful repayment
+        try {
+            onProgress?.("Updating loan status...");
+            const apiUrl = getApiUrl();
+            await axios.patch(
+                `${apiUrl}/loan-requests/${loanRequestId}/status`,
+                { status: 'PAID' }
+            );
+            console.log('Loan status updated to PAID');
+        } catch (statusError) {
+            // Log error but don't fail the transaction - repayment was successful on-chain
+            console.error('Failed to update loan status:', statusError);
+            // Transaction succeeded on-chain, so we still return the hash
+        }
 
         return repayTx.hash;
     } catch (error) {
