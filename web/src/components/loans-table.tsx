@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
-import { LoansTableProps } from "@/types/loan";
+import { PayModal } from "@/components/pay-modal";
+import { LoansTableProps, LoanRequestWithVault } from "@/types/loan";
 import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, formatWalletAddress } from "@/lib/format";
 
 export function LoansTable({
@@ -14,6 +16,49 @@ export function LoansTable({
     onWithdraw,
     onPay,
 }: LoansTableProps) {
+    const [payModalOpen, setPayModalOpen] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<LoanRequestWithVault | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [txHash, setTxHash] = useState<string | null>(null);
+
+    const openPayModal = (request: LoanRequestWithVault) => {
+        setSelectedRequest(request);
+        setPayModalOpen(true);
+        setTxHash(null);
+        setIsProcessing(false);
+    };
+
+    const closePayModal = () => {
+        setPayModalOpen(false);
+        setSelectedRequest(null);
+        setTxHash(null);
+        setIsProcessing(false);
+    };
+
+    const handlePayConfirm = async (amount: number) => {
+        if (!selectedRequest) return;
+
+        setIsProcessing(true);
+        setTxHash(null);
+
+        try {
+            await onPay(selectedRequest.id, amount);
+            closePayModal();
+        } catch (error) {
+            // Error is handled by the modal's ErrorPanel
+            throw error;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Calculate max amount (remaining loan amount)
+    const getMaxAmount = (request: LoanRequestWithVault): number => {
+        const currentCapacity = request.current_capacity ? parseFloat(request.current_capacity) : 0;
+        const maxLoan = request.max_loan;
+        // Max amount is the remaining loan amount
+        return Math.max(0, maxLoan - currentCapacity);
+    };
     return (
         <Card
             initial={false}
@@ -148,7 +193,7 @@ export function LoansTable({
                                                     variant="outline"
                                                     size="sm"
                                                     className="text-xs"
-                                                    onClick={() => onPay(request.id)}
+                                                    onClick={() => openPayModal(request)}
                                                 >
                                                     Pay
                                                 </Button>
@@ -161,6 +206,19 @@ export function LoansTable({
                     </table>
                 </div>
             </CardContent>
+
+            {/* Pay Modal */}
+            {selectedRequest && (
+                <PayModal
+                    isOpen={payModalOpen}
+                    onClose={closePayModal}
+                    onConfirm={handlePayConfirm}
+                    maxAmount={getMaxAmount(selectedRequest)}
+                    isProcessing={isProcessing}
+                    processingStep="Processing payment..."
+                    txHash={txHash}
+                />
+            )}
         </Card>
     );
 }

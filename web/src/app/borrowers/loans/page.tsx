@@ -75,9 +75,10 @@ export default function LoanDashboardPage() {
         console.log("Withdraw request:", requestId);
     };
 
-    const handlePayLoan = (requestId: number) => {
+    const handlePayLoan = async (requestId: number, amount: number) => {
         // TODO: Implement pay loan functionality
-        console.log("Pay loan:", requestId);
+        console.log("Pay loan:", requestId, "Amount:", amount);
+        // This will be implemented with actual blockchain transaction logic
     };
 
     return (

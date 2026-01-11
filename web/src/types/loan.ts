@@ -36,6 +36,6 @@ export interface LoansTableProps {
     error: string | null;
     onView: (requestId: number) => void;
     onWithdraw: (requestId: number) => void;
-    onPay: (requestId: number) => void;
+    onPay: (requestId: number, amount: number) => Promise<void>;
 }
 
