@@ -194,9 +194,31 @@ export default function VaultsPage() {
                                     </div>
 
                                     <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                                        <p className="text-sm font-medium">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                                                vault.status === 'RELEASED' ? 'bg-green-100 text-green-800' :
+                                                vault.status === 'FUNDED' ? 'bg-blue-100 text-blue-800' :
+                                                vault.status === 'FUNDING' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {vault.status}
+                                            </span>
+                                        </p>
+                                    </div>
+
+                                    <div>
                                         <p className="text-xs text-muted-foreground mb-1">Created</p>
                                         <p className="text-sm">{formatDate(vault.created_at)}</p>
                                     </div>
+
+                                    {/* Release Date - Show only if funds have been released */}
+                                    {vault.funded_at && (
+                                        <div>
+                                            <p className="text-xs text-muted-foreground mb-1">Funded At</p>
+                                            <p className="text-sm">{formatDate(vault.funded_at)}</p>
+                                        </div>
+                                    )}
 
                                     {/* Progress Bar */}
                                     <div>
@@ -216,12 +238,30 @@ export default function VaultsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Participate Button */}
-                                    <Button 
+                                    {/* Release Transaction Link - Show only if funds have been released */}
+                                    {vault.fund_release_tx_hash && (
+                                        <div className="pt-2">
+                                            <a
+                                                href={`https://explorer.sepolia.mantle.xyz/tx/${vault.fund_release_tx_hash}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                                            >
+                                                <span>View Release Transaction</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    )}
+
+                                    {/* Participate Button - Disable if already funded */}
+                                    <Button
                                         className="w-full mt-2"
                                         onClick={() => handleLend(vault)}
+                                        disabled={vault.status === 'FUNDED' || vault.status === 'RELEASED'}
                                     >
-                                        Lend
+                                        {vault.status === 'FUNDED' || vault.status === 'RELEASED' ? 'Fully Funded' : 'Lend'}
                                     </Button>
                                 </CardContent>
                             </Card>

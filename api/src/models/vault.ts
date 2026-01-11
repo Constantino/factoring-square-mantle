@@ -1,3 +1,5 @@
+import { VaultStatus } from "../types/vaultStatus";
+
 export interface CreateVaultBody {
     invoiceName: string;
     invoiceNumber: string;
@@ -31,6 +33,9 @@ export interface Vault {
     max_capacity: string;
     current_capacity: string;
     loan_request_id: number | null;
+    status: VaultStatus;
+    funded_at: Date | null;
+    fund_release_tx_hash: string | null;
     created_at: Date;
     modified_at: Date;
 }

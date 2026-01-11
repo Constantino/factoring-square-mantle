@@ -2,6 +2,7 @@
 import {CreateVaultBody} from "../models/vault";
 import {CreateVaultLenderBody} from "../models/vaultLender";
 import {ethers} from "ethers";
+import { VaultStatus } from "../types/vaultStatus";
 
 const validateRequiredFields = (body: CreateVaultBody): string | null => {
     const { invoiceName, invoiceNumber, borrowerAddress, invoiceAmount, maturityDate } = body;
@@ -88,7 +89,7 @@ const validateDepositAmount = (amount: number): string | null => {
     return null;
 };
 
-export const validateTrackDepositRequest = (
+export const validateDepositTracking = (
     vaultAddress: string,
     body: CreateVaultLenderBody
 ): string | null => {
@@ -107,6 +108,68 @@ export const validateTrackDepositRequest = (
     return null;
 };
 
-export const validateVaultLenderRequest = (vaultAddress: string): string | null => {
+export const validateVaultAddressParam = (vaultAddress: string): string | null => {
     return validateVaultAddress(vaultAddress);
+};
+
+export const validateLenderAddressParam = (lenderAddress: string): string | null => {
+    return validateLenderAddress(lenderAddress);
+};
+
+// Vault status validation for deposits
+export const validateVaultStatusForDeposit = (status: VaultStatus): string | null => {
+    if (status === VaultStatus.FUNDED || status === VaultStatus.RELEASED) {
+        return `Vault is already ${status}. No more deposits allowed.`;
+    }
+    return null;
+};
+
+// Vault status validation for manual release
+export const validateVaultStatusForRelease = (status: VaultStatus): { canRelease: boolean; message: string } => {
+    if (status === VaultStatus.RELEASED) {
+        return {
+            canRelease: false,
+            message: 'Funds already released for this vault'
+        };
+    }
+    
+    if (status !== VaultStatus.FUNDED) {
+        return {
+            canRelease: false,
+            message: `Vault must be in FUNDED status. Current status: ${status}`
+        };
+    }
+    
+    return {
+        canRelease: true,
+        message: 'Vault is ready for fund release'
+    };
+};
+
+// Vault capacity validation for release
+export const validateVaultCapacityForRelease = (
+    currentCapacity: number,
+    maxCapacity: number
+): string | null => {
+    if (currentCapacity < maxCapacity) {
+        return `Vault not fully funded. Current: ${currentCapacity}, Required: ${maxCapacity}`;
+    }
+    return null;
+};
+
+// Vault capacity validation
+export const validateVaultCapacity = (
+    currentCapacity: number,
+    maxCapacity: number,
+    depositAmount: number
+): string | null => {
+    const newCapacity = currentCapacity + depositAmount;
+    
+    if (newCapacity > maxCapacity) {
+        return `Deposit exceeds vault capacity. ` +
+               `Max: ${maxCapacity}, Current: ${currentCapacity}, ` +
+               `Attempted: ${depositAmount}, Would be: ${newCapacity}`;
+    }
+    
+    return null;
 };

@@ -7,8 +7,14 @@ const router: Router = express.Router();
 router.get('/', vc.getAllVaults);
 router.post('/', vc.createVault);
 
+// Lender portfolio routes
+router.get('/lender/:lenderAddress', vc.getPortfolioByLender);
+
 // Deposit routes
 router.post('/:vaultAddress/deposit', vc.trackDeposit);
 router.get('/:vaultAddress/lenders', vc.getVaultLenders);
+
+// Manual fund release route (admin/recovery)
+router.post('/:vaultAddress/release-funds', vc.manualReleaseFunds);
 
 export default router;

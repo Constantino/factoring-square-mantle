@@ -33,6 +33,7 @@ const Navbar = () => {
         { path: '/loan-request', roles: ['Admin', 'Borrower'] },
         { path: '/borrowers/loans', roles: ['Admin', 'Borrower'] },
         { path: '/vaults', roles: ['Admin', 'Lender'] },
+        { path: '/lenders/loans', roles: ['Admin', 'Lender'] },
     ];
 
     // Get first allowed route for a role

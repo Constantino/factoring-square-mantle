@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { CreateVaultBody } from "../models/vault";
 import { CreateVaultLenderBody } from "../models/vaultLender";
-import { validateRequest, validateTrackDepositRequest, validateVaultLenderRequest } from "../validators/vaultValidator";
+import { validateRequest, validateDepositTracking, validateVaultAddressParam, validateLenderAddressParam } from "../validators/vaultValidator";
 import { vaultService } from "../services/vaultService";
+import { VaultStatus } from "../types/vaultStatus";
 
 export const createVault = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -54,7 +55,7 @@ export const trackDeposit = async (req: Request, res: Response): Promise<void> =
         const body: CreateVaultLenderBody = req.body;
 
         // Validate deposit tracking request
-        const validationError = validateTrackDepositRequest(vaultAddress, body);
+        const validationError = validateDepositTracking(vaultAddress, body);
         if (validationError) {
             res.status(400).json({ error: validationError });
             return;
@@ -63,9 +64,20 @@ export const trackDeposit = async (req: Request, res: Response): Promise<void> =
         // Record deposit using service
         const result = await vaultService.trackDeposit(vaultAddress, body);
         
+        // Build response message
+        let message = 'Deposit tracked successfully';
+        if (result.fundReleased) {
+            message = 'Deposit tracked and funds released to borrower successfully';
+        } else if (result.vault.status === VaultStatus.FUNDED) {
+            message = 'Deposit tracked. Vault fully funded, attempting to release funds...';
+        }
+        
         res.status(200).json({
-            message: 'Deposit tracked successfully',
-            data: result
+            message,
+            data: result,
+            fundReleased: result.fundReleased || false,
+            releaseTxHash: result.releaseTxHash,
+            vaultStatus: result.vault.status
         });
     } catch (error) {
         console.error('Error tracking deposit:', error);
@@ -75,6 +87,24 @@ export const trackDeposit = async (req: Request, res: Response): Promise<void> =
             res.status(409).json({
                 error: 'Deposit already tracked',
                 details: 'This transaction has already been processed'
+            });
+            return;
+        }
+
+        // Check for capacity exceeded error
+        if (error instanceof Error && error.message.includes('exceeds vault capacity')) {
+            res.status(400).json({
+                error: 'Deposit exceeds vault capacity',
+                details: error.message
+            });
+            return;
+        }
+
+        // Check for vault already funded error
+        if (error instanceof Error && error.message.includes('already')) {
+            res.status(400).json({
+                error: 'Vault not accepting deposits',
+                details: error.message
             });
             return;
         }
@@ -91,7 +121,7 @@ export const getVaultLenders = async (req: Request, res: Response): Promise<void
         const { vaultAddress } = req.params;
 
         // Validate vault address format
-        const validationError = validateVaultLenderRequest(vaultAddress);
+        const validationError = validateVaultAddressParam(vaultAddress);
         if (validationError) {
             res.status(400).json({ error: validationError });
             return;
@@ -108,6 +138,66 @@ export const getVaultLenders = async (req: Request, res: Response): Promise<void
         console.error('Error retrieving lenders:', error);
         res.status(500).json({
             error: 'Failed to retrieve lenders',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const getPortfolioByLender = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { lenderAddress } = req.params;
+
+        // Validate lender address format
+        const validationError = validateLenderAddressParam(lenderAddress);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
+            return;
+        }
+
+        const portfolio = await vaultService.getPortfolioByLender(lenderAddress);
+        
+        res.status(200).json({
+            message: 'Lender portfolio retrieved successfully',
+            data: portfolio,
+            count: portfolio.length
+        });
+    } catch (error) {
+        console.error('Error retrieving lender portfolio:', error);
+        res.status(500).json({
+            error: 'Failed to retrieve lender portfolio',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const manualReleaseFunds = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { vaultAddress } = req.params;
+
+        // Validate vault address format
+        const validationError = validateVaultAddressParam(vaultAddress);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
+            return;
+        }
+
+        const result = await vaultService.manualReleaseFunds(vaultAddress);
+        
+        const statusCode = result.success ? 200 : 400;
+        
+        res.status(statusCode).json({
+            message: result.message,
+            success: result.success,
+            txHash: result.txHash,
+            explorerUrl: result.txHash 
+                ? `https://sepolia.mantlescan.xyz/tx/${result.txHash}`
+                : undefined,
+            vault: result.vault
+        });
+    } catch (error) {
+        console.error('Error manually releasing funds:', error);
+        res.status(500).json({
+            error: 'Failed to release funds',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
