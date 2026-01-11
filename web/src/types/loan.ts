@@ -30,3 +30,12 @@ export interface LoanRequestWithVault extends LoanRequest {
     vault_modified_at: string;
 }
 
+export interface LoansTableProps {
+    loanRequests: LoanRequestWithVault[];
+    isLoading: boolean;
+    error: string | null;
+    onView: (requestId: number) => void;
+    onWithdraw: (requestId: number) => void;
+    onPay: (requestId: number) => void;
+}
+
