@@ -49,6 +49,9 @@ export function LoansTable({
                                     Max Loan
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                    Funding
+                                </th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
                                     Vault Address
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
@@ -62,19 +65,19 @@ export function LoansTable({
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={10} className="py-8 px-4 text-center text-xs text-muted-foreground">
+                                    <td colSpan={11} className="py-8 px-4 text-center text-xs text-muted-foreground">
                                         Loading loan requests...
                                     </td>
                                 </tr>
                             ) : error ? (
                                 <tr>
-                                    <td colSpan={10} className="py-8 px-4 text-center text-xs text-destructive">
+                                    <td colSpan={11} className="py-8 px-4 text-center text-xs text-destructive">
                                         {error}
                                     </td>
                                 </tr>
                             ) : loanRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="py-8 px-4 text-center text-xs text-muted-foreground">
+                                    <td colSpan={11} className="py-8 px-4 text-center text-xs text-muted-foreground">
                                         No loan requests found
                                     </td>
                                 </tr>
@@ -101,6 +104,9 @@ export function LoansTable({
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
                                             {formatCurrency(request.max_loan)}
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            {request.current_capacity ? formatCurrency(parseFloat(request.current_capacity)) : "$0.00"}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
                                             {request.vault_address ? (
