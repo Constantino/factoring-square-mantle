@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/copy-button";
 import { LoansTableProps } from "@/types/loan";
 import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, formatWalletAddress } from "@/lib/format";
 
@@ -101,8 +102,18 @@ export function LoansTable({
                                         <td className="py-3 px-4 text-xs text-foreground">
                                             {formatCurrency(request.max_loan)}
                                         </td>
-                                        <td className="py-3 px-4 text-xs text-foreground font-mono">
-                                            {request.vault_address ? formatWalletAddress(request.vault_address) : "N/A"}
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            {request.vault_address ? (
+                                                <CopyButton
+                                                    textToCopy={request.vault_address}
+                                                    displayText={formatWalletAddress(request.vault_address)}
+                                                    iconSize={12}
+                                                    textSize="xs"
+                                                    showText={true}
+                                                />
+                                            ) : (
+                                                <span className="text-muted-foreground">N/A</span>
+                                            )}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
                                             <span className={`px-2 py-1 rounded-full ${getStatusBadgeClass(request.status)}`}>
