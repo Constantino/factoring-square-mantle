@@ -68,3 +68,25 @@ export function formatStatus(status: string): string {
         .join(' ');
 }
 
+/**
+ * Truncates an Ethereum address to show first 6 and last 4 characters
+ * @param address - The Ethereum address to truncate
+ * @returns Truncated address string (e.g., "0x1234...5678")
+ */
+export function truncateAddress(address: string): string {
+    if (!address) return "";
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+/**
+ * Calculates and formats capacity percentage
+ * @param current - Current capacity value
+ * @param max - Maximum capacity value
+ * @returns Formatted percentage string (e.g., "45.7%")
+ */
+export function formatCapacityPercentage(current: string | number, max: string | number): string {
+    const currentNum = typeof current === 'string' ? parseFloat(current) : current;
+    const maxNum = typeof max === 'string' ? parseFloat(max) : max;
+    return ((currentNum / maxNum) * 100).toFixed(1) + '%';
+}
+

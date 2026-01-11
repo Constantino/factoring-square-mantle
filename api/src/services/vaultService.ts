@@ -225,6 +225,30 @@ export class VaultService {
         const result = await pool.query<VaultLender>(query, [vaultAddress]);
         return result.rows;
     }
+
+    async getPortfolioByLender(lenderAddress: string): Promise<any[]> {
+        const query = `
+            SELECT 
+                vl.lender_id,
+                vl.lender_address,
+                vl.amount,
+                vl.tx_hash,
+                vl.created_at,
+                v.vault_id,
+                v.vault_address,
+                v.vault_name,
+                v.borrower_address,
+                v.max_capacity,
+                v.current_capacity
+            FROM "VaultLenders" vl
+            JOIN "Vaults" v ON vl.vault_id = v.vault_id
+            WHERE vl.lender_address = $1
+            ORDER BY vl.created_at DESC
+        `;
+
+        const result = await pool.query(query, [lenderAddress]);
+        return result.rows;
+    }
 }
 
 export const vaultService = new VaultService();

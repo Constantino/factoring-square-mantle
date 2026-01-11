@@ -4,7 +4,7 @@ import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import {NetworkSwitchError} from "@/types/errors";
 import {PrivyWallet} from "@/types/providers";
-import {Vault} from "@/types/vault";
+import {Vault, LenderPortfolio} from "@/types/vault";
 
 /**
  * Fetch all available vaults from the API
@@ -190,4 +190,29 @@ export async function participateInVault(
         console.error("Error participating in vault:", error);
         throw error;
     }
+}
+
+/**
+ * Fetch lender portfolio
+ * @param lenderAddress - The address of the lender
+ * @returns Promise with array of portfolio items
+ * @throws Error if the API call fails
+ */
+export async function fetchLenderPortfolio(lenderAddress: string): Promise<LenderPortfolio[]> {
+    let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    
+    if (!apiUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL is not configured");
+    }
+
+    // Ensure the URL has a protocol
+    if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
+        apiUrl = `http://${apiUrl}`;
+    }
+
+    // Remove trailing slash if present
+    apiUrl = apiUrl.replace(/\/$/, "");
+
+    const response = await axios.get(`${apiUrl}/vaults/lender/${lenderAddress}`);
+    return response.data.data || [];
 }
