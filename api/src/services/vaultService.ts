@@ -230,11 +230,14 @@ export class VaultService {
         newCapacity: number,
         newStatus: VaultStatus
     ): Promise<Vault> {
+        // Set funded_at when transitioning to FUNDED status
+        const shouldSetFundedAt = newStatus === VaultStatus.FUNDED;
+
         const query = `
             UPDATE "Vaults"
             SET current_capacity = $1,
                 status = $2,
-                funded_at = CASE WHEN $2 = $3 THEN NOW() ELSE funded_at END,
+                funded_at = CASE WHEN $3 = true AND funded_at IS NULL THEN NOW() ELSE funded_at END,
                 modified_at = NOW()
             WHERE vault_id = $4
             RETURNING *
@@ -243,7 +246,7 @@ export class VaultService {
         const result = await client.query<Vault>(query, [
             newCapacity,
             newStatus,
-            VaultStatus.FUNDED,
+            shouldSetFundedAt,
             vaultId
         ]);
 

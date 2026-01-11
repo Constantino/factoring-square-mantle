@@ -108,7 +108,8 @@ export function ParticipateModal({
                 <DialogHeader>
                     <DialogTitle>Participate in {vault.vault_name}</DialogTitle>
                     <DialogDescription>
-                        Enter the amount you want to contribute to this vault
+                        Enter the amount you want to contribute to this vault.
+                        {!isProcessing && " You'll need to approve two transactions: token approval and deposit."}
                     </DialogDescription>
                 </DialogHeader>
 
