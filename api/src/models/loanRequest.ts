@@ -1,4 +1,4 @@
-import { LoanStatusType } from "../types/loanStatus";
+import { LoanStatus } from "../types/loanStatus";
 
 export interface LoanRequestBody {
     invoice_number: string;
@@ -31,6 +31,6 @@ export interface LoanRequest {
     not_pledged: boolean;
     assignment_signed: boolean;
     borrower_address: string;
-    status: LoanStatusType;
+    status: LoanStatus;
 }
 

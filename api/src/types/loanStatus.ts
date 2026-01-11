@@ -5,5 +5,3 @@ export enum LoanStatus {
     CANCELED = 'CANCELED',
     DEFAULTED = 'DEFAULTED'
 }
-
-export type LoanStatusType = LoanStatus;
