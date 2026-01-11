@@ -4,6 +4,7 @@ export interface CreateVaultBody {
     borrowerAddress: string;
     invoiceAmount: number;
     maturityDate: number;
+    loanRequestId?: number;
 }
 
 export interface DeployVaultResult {
@@ -29,6 +30,7 @@ export interface Vault {
     vault_name: string;
     max_capacity: string;
     current_capacity: string;
+    loan_request_id: number | null;
     created_at: Date;
     modified_at: Date;
 }

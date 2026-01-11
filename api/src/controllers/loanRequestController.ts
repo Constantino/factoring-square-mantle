@@ -228,7 +228,8 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
                 invoiceNumber: loanRequest.invoice_number,
                 borrowerAddress: loanRequest.borrower_address,
                 invoiceAmount: loanRequest.max_loan,
-                maturityDate: maturityDate
+                maturityDate: maturityDate,
+                loanRequestId: loanRequest.id
             });
 
             res.status(201).json({
