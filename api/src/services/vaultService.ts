@@ -3,11 +3,13 @@ import { pool } from "../config/database";
 import { RPC_URL, PRIVATE_KEY, VAULT_FACTORY_ADDRESS } from "../config/constants";
 import { CreateVaultBody, DeployVaultResult, Vault } from "../models/vault";
 import { CreateVaultLenderBody, VaultLender } from "../models/vaultLender";
-import {VAULTFACTORY_ABI} from "../abi/VaultFactory";
+import { VAULTFACTORY_ABI } from "../abi/VaultFactory";
 import { VAULT_ABI } from "../abi/Vault";
 import { validateVaultStatusForDeposit, validateVaultCapacity, validateVaultStatusForRelease, validateVaultCapacityForRelease } from "../validators/vaultValidator";
 import { PoolClient } from "pg";
 import { VaultStatus } from "../types/vaultStatus";
+import { LoanStatus } from "../types/loanStatus";
+import { loanService } from "./loanService";
 
 export class VaultService {
     private provider: ethers.JsonRpcProvider;
@@ -152,7 +154,7 @@ export class VaultService {
         vaultAddress: string
     ): Promise<any> {
         const query = `
-            SELECT vault_id, max_capacity, current_capacity, status, borrower_address
+            SELECT vault_id, max_capacity, current_capacity, status, borrower_address, loan_request_id
             FROM "Vaults"
             WHERE vault_address = $1
             FOR UPDATE
@@ -256,7 +258,7 @@ export class VaultService {
     // Step 6: Release funds via smart contract
     private async releaseFundsToContract(vaultAddress: string): Promise<string> {
         console.log(`🚀 Vault ${vaultAddress} reached capacity. Releasing funds to borrower...`);
-        
+
         const vaultContract = new ethers.Contract(
             vaultAddress,
             VAULT_ABI,
@@ -265,10 +267,10 @@ export class VaultService {
 
         const releaseTx = await vaultContract.releaseFunds();
         const releaseReceipt = await releaseTx.wait();
-        
+
         const txHash = releaseReceipt.hash;
         console.log(`✅ Funds released successfully. TX: ${txHash}`);
-        
+
         return txHash;
     }
 
@@ -281,7 +283,7 @@ export class VaultService {
                 modified_at = NOW()
             WHERE vault_id = $3
         `;
-        
+
         await pool.query(query, [txHash, VaultStatus.RELEASED, vaultId]);
     }
 
@@ -332,10 +334,12 @@ export class VaultService {
                 try {
                     releaseTxHash = await this.releaseFundsToContract(vaultAddress);
                     await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
-                    
+
                     fundReleased = true;
                     updatedVault.fund_release_tx_hash = releaseTxHash;
                     updatedVault.status = VaultStatus.RELEASED;
+
+                    await loanService.changeLoanStatus(vault.loan_request_id, LoanStatus.ACTIVE);
 
                 } catch (releaseError) {
                     console.error('❌ Error releasing funds to borrower:', releaseError);
@@ -426,7 +430,7 @@ export class VaultService {
         const currentCapacity = parseFloat(vault.current_capacity);
         const maxCapacity = parseFloat(vault.max_capacity);
         const capacityError = validateVaultCapacityForRelease(currentCapacity, maxCapacity);
-        
+
         if (capacityError) {
             return {
                 canRelease: false,
@@ -440,9 +444,9 @@ export class VaultService {
         };
     }
 
-    async manualReleaseFunds(vaultAddress: string): Promise<{ 
-        success: boolean; 
-        txHash?: string; 
+    async manualReleaseFunds(vaultAddress: string): Promise<{
+        success: boolean;
+        txHash?: string;
         vault: Vault;
         message: string;
     }> {
@@ -452,7 +456,7 @@ export class VaultService {
 
             // Step 2: Validate vault can be released
             const validation = this.validateVaultForRelease(vault);
-            
+
             if (!validation.canRelease) {
                 return {
                     success: false,
