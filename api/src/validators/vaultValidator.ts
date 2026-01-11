@@ -88,7 +88,7 @@ const validateDepositAmount = (amount: number): string | null => {
     return null;
 };
 
-export const validateTrackDepositRequest = (
+export const validateDepositTracking = (
     vaultAddress: string,
     body: CreateVaultLenderBody
 ): string | null => {
@@ -107,6 +107,10 @@ export const validateTrackDepositRequest = (
     return null;
 };
 
-export const validateVaultLenderRequest = (vaultAddress: string): string | null => {
+export const validateVaultAddressParam = (vaultAddress: string): string | null => {
     return validateVaultAddress(vaultAddress);
+};
+
+export const validateLenderAddressParam = (lenderAddress: string): string | null => {
+    return validateLenderAddress(lenderAddress);
 };
