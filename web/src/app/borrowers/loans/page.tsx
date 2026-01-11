@@ -9,7 +9,7 @@ import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanRequest } from "@/types/loan";
-import { getLoanRequestsByBorrower } from "@/service/loanService";
+import { getLoanRequestsByBorrower } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
