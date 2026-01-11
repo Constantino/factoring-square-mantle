@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { PayModal } from "@/components/pay-modal";
 import { LoansTableProps, LoanRequestWithVault } from "@/types/loan";
-import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, formatWalletAddress } from "@/lib/format";
+import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, truncateAddress } from "@/lib/format";
 
 export function LoansTable({
     loanRequests,
@@ -157,7 +157,7 @@ export function LoansTable({
                                             {request.vault_address ? (
                                                 <CopyButton
                                                     textToCopy={request.vault_address}
-                                                    displayText={formatWalletAddress(request.vault_address)}
+                                                    displayText={truncateAddress(request.vault_address)}
                                                     iconSize={12}
                                                     textSize="xs"
                                                     showText={true}
