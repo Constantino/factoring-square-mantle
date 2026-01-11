@@ -20,12 +20,14 @@ export function LoansTable({
     const [selectedRequest, setSelectedRequest] = useState<LoanRequestWithVault | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [txHash, setTxHash] = useState<string | null>(null);
+    const [processingStep, setProcessingStep] = useState<string>("Processing payment...");
 
     const openPayModal = (request: LoanRequestWithVault) => {
         setSelectedRequest(request);
         setPayModalOpen(true);
         setTxHash(null);
         setIsProcessing(false);
+        setProcessingStep("Processing payment...");
     };
 
     const closePayModal = () => {
@@ -33,6 +35,7 @@ export function LoansTable({
         setSelectedRequest(null);
         setTxHash(null);
         setIsProcessing(false);
+        setProcessingStep("Processing payment...");
     };
 
     const handlePayConfirm = async (amount: number) => {
@@ -40,10 +43,19 @@ export function LoansTable({
 
         setIsProcessing(true);
         setTxHash(null);
+        setProcessingStep("Processing payment...");
 
         try {
-            await onPay(selectedRequest.id, amount);
-            closePayModal();
+            const hash = await onPay(
+                selectedRequest.id,
+                amount,
+                (step: string) => {
+                    setProcessingStep(step);
+                }
+            );
+            setTxHash(hash);
+            // Don't close modal immediately - let user see the success message
+            // The modal will show the transaction hash
         } catch (error) {
             // Error is handled by the modal's ErrorPanel
             throw error;
@@ -52,12 +64,10 @@ export function LoansTable({
         }
     };
 
-    // Calculate max amount (remaining loan amount)
+    // Calculate max amount (full loan amount)
     const getMaxAmount = (request: LoanRequestWithVault): number => {
-        const currentCapacity = request.current_capacity ? parseFloat(request.current_capacity) : 0;
-        const maxLoan = request.max_loan;
-        // Max amount is the remaining loan amount
-        return Math.max(0, maxLoan - currentCapacity);
+        // Max amount is the full max loan value
+        return request.max_loan;
     };
     return (
         <Card
@@ -215,7 +225,7 @@ export function LoansTable({
                     onConfirm={handlePayConfirm}
                     maxAmount={getMaxAmount(selectedRequest)}
                     isProcessing={isProcessing}
-                    processingStep="Processing payment..."
+                    processingStep={processingStep}
                     txHash={txHash}
                 />
             )}

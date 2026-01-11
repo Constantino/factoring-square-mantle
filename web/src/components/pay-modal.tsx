@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Dialog,
     DialogContent,
@@ -25,26 +25,56 @@ export function PayModal({
     txHash = null,
 }: PayModalProps) {
     const [amount, setAmount] = useState<number>(0);
-    const [inputValue, setInputValue] = useState<string>("0");
+    const [inputValue, setInputValue] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
+
+    // Reset state when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setAmount(0);
+            setInputValue("");
+            setError(null);
+        }
+    }, [isOpen]);
 
     // Handle close - reset state when closing
     const handleClose = () => {
         setAmount(0);
-        setInputValue("0");
+        setInputValue("");
         setError(null);
         onClose();
     };
 
     // Handle input change
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
+        let value = e.target.value;
+
+        // Remove any non-numeric characters except decimal point
+        // Allow: digits, one decimal point, and empty string
+        value = value.replace(/[^0-9.]/g, '');
+
+        // Ensure only one decimal point
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+
         setInputValue(value);
 
+        // Handle empty input or just a decimal point
+        if (value === "" || value === ".") {
+            setAmount(0);
+            return;
+        }
+
         const numValue = parseFloat(value);
-        if (!isNaN(numValue) && numValue >= 0 && (maxAmount === undefined || numValue <= maxAmount)) {
+
+        // If it's a valid number and non-negative, set it
+        // We'll validate against maxAmount in the button disabled condition
+        if (!isNaN(numValue) && numValue >= 0 && isFinite(numValue)) {
             setAmount(numValue);
-        } else if (value === "") {
+        } else {
+            // Invalid number, set amount to 0
             setAmount(0);
         }
     };
@@ -107,14 +137,12 @@ export function PayModal({
                                 $
                             </span>
                             <Input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 value={inputValue}
                                 onChange={handleInputChange}
                                 className="pl-7"
                                 placeholder="0.00"
-                                min="0"
-                                max={maxAmount}
-                                step="0.01"
                                 disabled={isProcessing}
                             />
                         </div>
