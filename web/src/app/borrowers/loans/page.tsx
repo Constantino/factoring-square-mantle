@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
-import { LoanRequest } from "@/types/loan";
-import { getLoanRequestsByBorrower } from "@/services/loanService";
+import { LoanRequestWithVault } from "@/types/loan";
+import { getLoanRequestsByBorrowerWithVaults } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
     const [copied, setCopied] = useState(false);
-    const [loanRequests, setLoanRequests] = useState<LoanRequest[]>([]);
+    const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const creditScore = 725; // Example score - can be made dynamic later
@@ -34,7 +34,7 @@ export default function LoanDashboardPage() {
             setIsLoading(true);
             setError(null);
 
-            const data = await getLoanRequestsByBorrower(walletAddress);
+            const data = await getLoanRequestsByBorrowerWithVaults(walletAddress);
             setLoanRequests(data);
         } catch (err) {
             console.error("Error fetching loan requests:", err);
