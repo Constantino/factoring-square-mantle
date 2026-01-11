@@ -1,4 +1,5 @@
 import { LoanRequestBody } from '../models/loanRequest';
+import { LoanStatus } from '../types/loanStatus';
 
 export const validateInvoiceNumber = (invoice_number: unknown): string | null => {
     if (!invoice_number || typeof invoice_number !== 'string' || invoice_number.trim().length === 0) {
@@ -161,6 +162,47 @@ export const validateRequest = (data: LoanRequestBodyForValidation): string | nu
     const borrowerAddressError = validateBorrowerAddress(data.borrower_address);
     if (borrowerAddressError) {
         return borrowerAddressError;
+    }
+
+    return null;
+};
+
+export const validateLoanId = (id: unknown): string | null => {
+    if (id === undefined || id === null) {
+        return 'Loan ID is required';
+    }
+
+    const loanId = typeof id === 'string' ? parseInt(id, 10) : typeof id === 'number' ? id : NaN;
+
+    if (isNaN(loanId) || loanId <= 0 || !Number.isInteger(loanId)) {
+        return 'Loan ID must be a positive integer';
+    }
+
+    return null;
+};
+
+export const validateLoanStatus = (status: unknown): string | null => {
+    if (!status || typeof status !== 'string') {
+        return 'Status is required and must be a string';
+    }
+
+    const validStatuses = Object.values(LoanStatus);
+    if (!validStatuses.includes(status as LoanStatus)) {
+        return `Invalid status. Must be one of: ${validStatuses.join(', ')}`;
+    }
+
+    return null;
+};
+
+export const validateChangeLoanStatusRequest = (id: unknown, status: unknown): string | null => {
+    const loanIdError = validateLoanId(id);
+    if (loanIdError) {
+        return loanIdError;
+    }
+
+    const statusError = validateLoanStatus(status);
+    if (statusError) {
+        return statusError;
     }
 
     return null;
