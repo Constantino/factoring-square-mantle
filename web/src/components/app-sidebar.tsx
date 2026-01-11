@@ -16,11 +16,20 @@ import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault, Cr
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/stores/userStore"
+import { useRoleStore, UserRole } from "@/stores/roleStore"
 import { usePrivy } from "@privy-io/react-auth"
 import { Separator } from "@/components/ui/separator"
 
+interface MenuItem {
+    title: string;
+    url: string;
+    icon: any;
+    roles: UserRole[];
+}
+
 export function AppSidebar() {
     const logout = useUserStore((state) => state.logout)
+    const { currentRole } = useRoleStore()
     const { logout: privyLogout } = usePrivy()
     const router = useRouter()
     const { state } = useSidebar()
@@ -31,33 +40,41 @@ export function AppSidebar() {
         router.push('/')
     }
 
-    const menuItems = [
+    const allMenuItems: MenuItem[] = [
         {
             title: "Users",
             url: "/users",
             icon: Users,
+            roles: ['Admin'],
         },
         {
             title: "Borrower KYB",
             url: "/borrower-kyb",
             icon: Building2,
+            roles: ['Admin', 'Borrower'],
         },
         {
             title: "Request Loan",
             url: "/loan-request",
             icon: Receipt,
+            roles: ['Admin', 'Borrower'],
         },
         {
             title: "My loans",
             url: "/borrowers/loans",
             icon: CreditCard,
+            roles: ['Admin', 'Borrower'],
         },
         {
             title: "Vaults",
             url: "/vaults",
             icon: Vault,
+            roles: ['Admin', 'Lender'],
         },
     ]
+
+    // Filter menu items based on current role
+    const menuItems = allMenuItems.filter(item => item.roles.includes(currentRole))
 
     return (
         <Sidebar side="left" variant="sidebar" collapsible="icon" className="pt-16 relative">
