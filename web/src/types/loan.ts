@@ -36,7 +36,6 @@ export interface LoansTableProps {
     isLoading: boolean;
     error: string | null;
     onView: (requestId: number) => void;
-    onWithdraw: (requestId: number) => void;
     onPay: (requestId: number, amount: number, onProgress?: (step: string) => void) => Promise<string>;
 }
 

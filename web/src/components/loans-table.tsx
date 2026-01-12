@@ -14,7 +14,6 @@ export function LoansTable({
     isLoading,
     error,
     onView,
-    onWithdraw,
     onPay,
 }: LoansTableProps) {
     const [payModalOpen, setPayModalOpen] = useState(false);
@@ -186,14 +185,6 @@ export function LoansTable({
                                                     onClick={() => onView(request.id)}
                                                 >
                                                     View
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-xs"
-                                                    onClick={() => onWithdraw(request.id)}
-                                                >
-                                                    Withdraw
                                                 </Button>
                                                 <Button
                                                     variant="outline"

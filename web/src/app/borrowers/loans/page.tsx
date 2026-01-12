@@ -72,11 +72,6 @@ export default function LoanDashboardPage() {
         console.log("View request:", requestId);
     };
 
-    const handleWithdrawRequest = (requestId: number) => {
-        // TODO: Implement withdraw request functionality
-        console.log("Withdraw request:", requestId);
-    };
-
     const handlePayLoan = async (requestId: number, amount: number, onProgress?: (step: string) => void): Promise<string> => {
         if (!wallets || wallets.length === 0) {
             throw new Error("No wallet connected. Please connect a wallet first.");
@@ -217,7 +212,6 @@ export default function LoanDashboardPage() {
                     isLoading={isLoading}
                     error={error}
                     onView={handleView}
-                    onWithdraw={handleWithdrawRequest}
                     onPay={handlePayLoan}
                 />
             </div>
