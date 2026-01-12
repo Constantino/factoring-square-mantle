@@ -48,6 +48,47 @@ export async function getLoanRequestsByBorrowerWithVaults(
 }
 
 /**
+ * Calculate the number of days between two dates
+ * @param startDate - Start date (string or Date object)
+ * @param endDate - End date (string or Date object)
+ * @returns Number of days between the dates, or 0 if invalid
+ */
+export function calculateDaysBetweenDates(startDate: string | Date, endDate: string | Date): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Validate dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return 0;
+    }
+
+    // Calculate number of days
+    const timeDiff = end.getTime() - start.getTime();
+    const numberOfDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+    // Return 0 if days is negative or NaN
+    if (numberOfDays <= 0 || isNaN(numberOfDays)) {
+        return 0;
+    }
+
+    return numberOfDays;
+}
+
+/**
+ * Calculate the number of days since funds were released
+ * @param fundReleaseAt - Date when funds were released (string or null)
+ * @returns Number of days since funds were released, or 0 if not released or invalid
+ */
+export function calculateDaysSinceFundRelease(fundReleaseAt: string | null): number {
+    if (!fundReleaseAt) {
+        return 0;
+    }
+
+    const today = new Date();
+    return calculateDaysBetweenDates(fundReleaseAt, today);
+}
+
+/**
  * Calculate interest based on the formula:
  * numberOfDays(loanrequest.invoice_due_date - vault.fund_release_at) * (loanRequest.monthly_interest_rate / 30) * max_loan
  * @param request - The loan request with vault information
@@ -68,23 +109,11 @@ export function calculateInterest(request: LoanRequestWithVault): number {
 
     console.log('request.max_loan', request.max_loan);
 
-
-    const invoiceDueDate = new Date(request.invoice_due_date);
-    const fundReleaseDate = new Date(request.vault_fund_release_at);
-    console.log('invoiceDueDate', invoiceDueDate);
-    console.log('fundReleaseDate', fundReleaseDate);
-
-    // Validate dates are valid
-    if (isNaN(invoiceDueDate.getTime()) || isNaN(fundReleaseDate.getTime())) {
-        return 0;
-    }
-
     // Calculate number of days between fund release and invoice due date
-    const timeDiff = invoiceDueDate.getTime() - fundReleaseDate.getTime();
-    const numberOfDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    const numberOfDays = calculateDaysBetweenDates(request.vault_fund_release_at, request.invoice_due_date);
 
-    // If days is negative or zero, return 0 interest
-    if (numberOfDays <= 0 || isNaN(numberOfDays)) {
+    // If days is zero, return 0 interest
+    if (numberOfDays === 0) {
         return 0;
     }
 
