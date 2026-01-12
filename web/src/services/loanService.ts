@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ethers } from "ethers";
 import { getApiUrl } from "@/lib/api";
-import { LoanRequest, LoanRequestWithVault } from "@/types/loan";
+import { LoanRequest, LoanRequestWithVault } from "@/types/loans";
 import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import { PrivyWallet } from "@/types/providers";

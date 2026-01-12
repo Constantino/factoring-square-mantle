@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { PayModal } from "@/components/pay-modal";
-import { LoansTableProps, LoanRequestWithVault } from "@/types/loan";
+import { LoansTableProps, LoanRequestWithVault } from "@/types/loans";
 import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, truncateAddress } from "@/lib/format";
 import { getTotalDebt } from "@/services/loanService";
 
@@ -191,6 +191,7 @@ export function LoansTable({
                                                     size="sm"
                                                     className="text-xs"
                                                     onClick={() => openPayModal(request)}
+                                                    disabled={request.status.toLowerCase() !== 'active'}
                                                 >
                                                     Pay
                                                 </Button>

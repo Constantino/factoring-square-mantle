@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
-import { LoanRequestWithVault } from "@/types/loan";
+import { LoanRequestWithVault } from "@/types/loans";
 import { getLoanRequestsByBorrowerWithVaults, repayLoan } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
