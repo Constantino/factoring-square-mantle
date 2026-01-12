@@ -349,10 +349,27 @@ export async function repayLoan(
 
         onProgress?.("✅ Repayment successful!");
 
+        const apiUrl = getApiUrl();
+
+        // Track repayment in vault
+        try {
+            onProgress?.("Tracking repayment in vault...");
+            await axios.post(
+                `${apiUrl}/vaults/${vaultAddress}/repayments`,
+                {
+                    amount,
+                    txHash: repayTx.hash
+                }
+            );
+            console.log('Vault repayment tracked successfully');
+        } catch (vaultError) {
+            // Log error but don't fail - repayment was successful on-chain
+            console.error('Failed to track vault repayment:', vaultError);
+        }
+
         // Update loan status to PAID after successful repayment
         try {
             onProgress?.("Updating loan status...");
-            const apiUrl = getApiUrl();
             await axios.patch(
                 `${apiUrl}/loan-requests/${loanRequestId}/status`,
                 { status: 'PAID' }
@@ -370,4 +387,3 @@ export async function repayLoan(
         throw error;
     }
 }
-

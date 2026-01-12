@@ -18,3 +18,7 @@ router.get('/:vaultAddress/lenders', vc.getVaultLenders);
 router.post('/:vaultAddress/release-funds', vc.manualReleaseFunds);
 
 export default router;
+// Repayment routes
+router.post('/:vaultAddress/repayments', vc.trackRepayment);
+
+export default router;

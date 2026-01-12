@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { LenderPortfolio } from "@/types/vault";
 import { formatCurrency, formatDate, truncateAddress, formatCapacityPercentage } from "@/lib/format";
 
@@ -8,12 +9,14 @@ interface PortfolioTableProps {
     portfolio: LenderPortfolio[];
     isLoading: boolean;
     error: string | null;
+    onRedeem?: (vaultAddress: string, investedAmount: number) => void;
 }
 
 export function PortfolioTable({
     portfolio,
     isLoading,
     error,
+    onRedeem,
 }: PortfolioTableProps) {
 
     return (
@@ -42,16 +45,16 @@ export function PortfolioTable({
                                     Amount Invested
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
-                                    Vault Capacity
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
-                                    Filled
+                                    Status
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
                                     Date
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
                                     Transaction
+                                </th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                    Actions
                                 </th>
                             </tr>
                         </thead>
@@ -94,11 +97,18 @@ export function PortfolioTable({
                                         <td className="py-3 px-4 text-xs text-foreground font-semibold">
                                             {formatCurrency(parseFloat(item.amount))}
                                         </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            {formatCurrency(parseFloat(item.current_capacity))} / {formatCurrency(parseFloat(item.max_capacity))}
-                                        </td>
-                                        <td className="py-3 px-4 text-xs text-foreground">
-                                            {formatCapacityPercentage(item.current_capacity, item.max_capacity)}
+                                        <td className="py-3 px-4 text-xs">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                item.status === 'REPAID' 
+                                                    ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+                                                    : item.status === 'RELEASED'
+                                                    ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                                                    : item.status === 'FUNDED'
+                                                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                                                    : 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
+                                            }`}>
+                                                {item.status}
+                                            </span>
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
                                             {formatDate(item.created_at)}
@@ -112,6 +122,17 @@ export function PortfolioTable({
                                             >
                                                 {truncateAddress(item.tx_hash)}
                                             </a>
+                                        </td>
+                                        <td className="py-3 px-4 text-xs">
+                                            {item.status === 'REPAID' && onRedeem && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => onRedeem(item.vault_address, parseFloat(item.amount))}
+                                                    className="h-7 px-3 text-xs"
+                                                >
+                                                    Redeem
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

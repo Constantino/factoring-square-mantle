@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { CreateVaultBody } from "../models/vault";
 import { CreateVaultLenderBody } from "../models/vaultLender";
-import { validateRequest, validateDepositTracking, validateVaultAddressParam, validateLenderAddressParam } from "../validators/vaultValidator";
+import { validateRequest, validateDepositTracking, validateVaultAddressParam, validateLenderAddressParam, validateRepaymentTracking, TrackRepaymentBody } from "../validators/vaultValidator";
 import { vaultService } from "../services/vaultService";
 import { VaultStatus } from "../types/vaultStatus";
 
@@ -198,6 +198,53 @@ export const manualReleaseFunds = async (req: Request, res: Response): Promise<v
         console.error('Error manually releasing funds:', error);
         res.status(500).json({
             error: 'Failed to release funds',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const trackRepayment = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { vaultAddress } = req.params;
+        const body: TrackRepaymentBody = req.body;
+
+        // Validate repayment tracking request
+        const validationError = validateRepaymentTracking(vaultAddress, body);
+        if (validationError) {
+            res.status(400).json({ error: validationError });
+            return;
+        }
+
+        // Track repayment using service
+        const result = await vaultService.trackRepayment(vaultAddress, body);
+
+        res.status(200).json({
+            message: result.message,
+            data: result.vault
+        });
+    } catch (error) {
+        console.error('Error tracking repayment:', error);
+
+        // Check for vault not found error
+        if (error instanceof Error && error.message.includes('not found')) {
+            res.status(404).json({
+                error: 'Vault not found',
+                details: error.message
+            });
+            return;
+        }
+
+        // Check for vault status error
+        if (error instanceof Error && error.message.includes('status')) {
+            res.status(400).json({
+                error: 'Invalid vault status for repayment',
+                details: error.message
+            });
+            return;
+        }
+
+        res.status(500).json({
+            error: 'Failed to track repayment',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

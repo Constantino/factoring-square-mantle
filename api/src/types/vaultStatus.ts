@@ -3,6 +3,7 @@ export enum VaultStatus {
     FUNDING = 'FUNDING',
     FUNDED = 'FUNDED',
     RELEASED = 'RELEASED',
+    REPAID = 'REPAID',
     MATURED = 'MATURED',
     DEFAULTED = 'DEFAULTED'
 }
