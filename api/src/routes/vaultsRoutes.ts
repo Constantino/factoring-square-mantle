@@ -14,4 +14,7 @@ router.get('/lender/:lenderAddress', vc.getPortfolioByLender);
 router.post('/:vaultAddress/deposit', vc.trackDeposit);
 router.get('/:vaultAddress/lenders', vc.getVaultLenders);
 
+// Manual fund release route (admin/recovery)
+router.post('/:vaultAddress/release-funds', vc.manualReleaseFunds);
+
 export default router;

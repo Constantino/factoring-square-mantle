@@ -4,6 +4,10 @@ import { RPC_URL, PRIVATE_KEY, VAULT_FACTORY_ADDRESS } from "../config/constants
 import { CreateVaultBody, DeployVaultResult, Vault } from "../models/vault";
 import { CreateVaultLenderBody, VaultLender } from "../models/vaultLender";
 import {VAULTFACTORY_ABI} from "../abi/VaultFactory";
+import { VAULT_ABI } from "../abi/Vault";
+import { validateVaultStatusForDeposit, validateVaultCapacity, validateVaultStatusForRelease, validateVaultCapacityForRelease } from "../validators/vaultValidator";
+import { PoolClient } from "pg";
+import { VaultStatus } from "../types/vaultStatus";
 
 export class VaultService {
     private provider: ethers.JsonRpcProvider;
@@ -101,10 +105,11 @@ export class VaultService {
                 max_capacity,
                 current_capacity,
                 loan_request_id,
+                status,
                 created_at,
                 modified_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         `;
 
         await pool.query(query, [
@@ -113,7 +118,8 @@ export class VaultService {
             vaultData.vaultName,
             vaultData.maxCapacity,
             vaultData.currentCapacity,
-            vaultData.loanRequestId || null
+            vaultData.loanRequestId || null,
+            VaultStatus.PENDING
         ]);
     }
 
@@ -127,6 +133,9 @@ export class VaultService {
                 max_capacity,
                 current_capacity,
                 loan_request_id,
+                status,
+                funded_at,
+                fund_release_tx_hash,
                 created_at,
                 modified_at
             FROM "Vaults"
@@ -137,72 +146,208 @@ export class VaultService {
         return result.rows;
     }
 
+    // Step 1: Get vault for update with lock
+    private async getVaultForUpdate(
+        client: PoolClient,
+        vaultAddress: string
+    ): Promise<any> {
+        const query = `
+            SELECT vault_id, max_capacity, current_capacity, status, borrower_address
+            FROM "Vaults"
+            WHERE vault_address = $1
+            FOR UPDATE
+        `;
+        const result = await client.query(query, [vaultAddress]);
+
+        if (result.rows.length === 0) {
+            throw new Error(`Vault not found: ${vaultAddress}`);
+        }
+
+        return result.rows[0];
+    }
+
+    // Step 2: Validate vault can accept deposit
+    private validateVaultForDeposit(vault: any, depositAmount: number): void {
+        // Validate vault status
+        const statusError = validateVaultStatusForDeposit(vault.status);
+        if (statusError) {
+            throw new Error(statusError);
+        }
+
+        // Validate capacity
+        const currentCapacity = parseFloat(vault.current_capacity);
+        const maxCapacity = parseFloat(vault.max_capacity);
+        const capacityError = validateVaultCapacity(currentCapacity, maxCapacity, depositAmount);
+        if (capacityError) {
+            throw new Error(capacityError);
+        }
+    }
+
+    // Step 3: Insert lender record
+    private async insertLenderRecord(
+        client: PoolClient,
+        vaultId: number,
+        depositData: CreateVaultLenderBody
+    ): Promise<VaultLender> {
+        const query = `
+            INSERT INTO "VaultLenders" (
+                vault_id,
+                lender_address,
+                amount,
+                tx_hash,
+                created_at
+            )
+            VALUES ($1, $2, $3, $4, NOW())
+            RETURNING *
+        `;
+
+        const result = await client.query<VaultLender>(query, [
+            vaultId,
+            depositData.lenderAddress,
+            depositData.amount,
+            depositData.txHash
+        ]);
+
+        return result.rows[0];
+    }
+
+    // Step 4: Calculate new status based on capacity
+    private calculateNewStatus(currentStatus: VaultStatus, currentCapacity: number, newCapacity: number, maxCapacity: number): VaultStatus {
+        // Update status based on capacity
+        if (currentStatus === VaultStatus.PENDING && newCapacity > 0) {
+            return VaultStatus.FUNDING;
+        }
+        if (newCapacity >= maxCapacity) {
+            return VaultStatus.FUNDED;
+        }
+        return currentStatus;
+    }
+
+    // Step 5: Update vault capacity and status
+    private async updateVaultCapacityAndStatus(
+        client: PoolClient,
+        vaultId: number,
+        newCapacity: number,
+        newStatus: VaultStatus
+    ): Promise<Vault> {
+        // Set funded_at when transitioning to FUNDED status
+        const shouldSetFundedAt = newStatus === VaultStatus.FUNDED;
+
+        const query = `
+            UPDATE "Vaults"
+            SET current_capacity = $1,
+                status = $2,
+                funded_at = CASE WHEN $3 = true AND funded_at IS NULL THEN NOW() ELSE funded_at END,
+                modified_at = NOW()
+            WHERE vault_id = $4
+            RETURNING *
+        `;
+
+        const result = await client.query<Vault>(query, [
+            newCapacity,
+            newStatus,
+            shouldSetFundedAt,
+            vaultId
+        ]);
+
+        return result.rows[0];
+    }
+
+    // Step 6: Release funds via smart contract
+    private async releaseFundsToContract(vaultAddress: string): Promise<string> {
+        console.log(`🚀 Vault ${vaultAddress} reached capacity. Releasing funds to borrower...`);
+        
+        const vaultContract = new ethers.Contract(
+            vaultAddress,
+            VAULT_ABI,
+            this.wallet
+        );
+
+        const releaseTx = await vaultContract.releaseFunds();
+        const releaseReceipt = await releaseTx.wait();
+        
+        const txHash = releaseReceipt.hash;
+        console.log(`✅ Funds released successfully. TX: ${txHash}`);
+        
+        return txHash;
+    }
+
+    // Step 7: Update vault with release transaction hash
+    private async updateVaultReleaseStatus(vaultId: number, txHash: string): Promise<void> {
+        const query = `
+            UPDATE "Vaults"
+            SET fund_release_tx_hash = $1,
+                status = $2,
+                modified_at = NOW()
+            WHERE vault_id = $3
+        `;
+        
+        await pool.query(query, [txHash, VaultStatus.RELEASED, vaultId]);
+    }
+
+    // Main deposit tracking function - now clean and readable
     async trackDeposit(
         vaultAddress: string,
         depositData: CreateVaultLenderBody
-    ): Promise<{ vault: Vault; lender: VaultLender }> {
+    ): Promise<{ vault: Vault; lender: VaultLender; fundReleased?: boolean; releaseTxHash?: string }> {
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN');
 
-            // 1. Get vault_id from vault_address
-            const vaultQuery = `
-                SELECT vault_id, max_capacity, current_capacity
-                FROM "Vaults"
-                WHERE vault_address = $1
-            `;
-            const vaultResult = await client.query(vaultQuery, [vaultAddress]);
+            // Step 1: Get vault data with lock
+            const vault = await this.getVaultForUpdate(client, vaultAddress);
 
-            if (vaultResult.rows.length === 0) {
-                throw new Error(`Vault not found: ${vaultAddress}`);
-            }
+            // Step 2: Validate vault can accept deposit
+            this.validateVaultForDeposit(vault, depositData.amount);
 
-            const vault = vaultResult.rows[0];
-            const vaultId = vault.vault_id;
+            // Step 3: Calculate new capacity
+            const currentCapacity = parseFloat(vault.current_capacity);
+            const maxCapacity = parseFloat(vault.max_capacity);
+            const newCapacity = currentCapacity + depositData.amount;
+            const isFullyFunded = newCapacity >= maxCapacity;
 
-            // 2. Insert lender record
-            const lenderQuery = `
-                INSERT INTO "VaultLenders" (
-                    vault_id,
-                    lender_address,
-                    amount,
-                    tx_hash,
-                    created_at
-                )
-                VALUES ($1, $2, $3, $4, NOW())
-                RETURNING *
-            `;
+            // Step 4: Insert lender record
+            const lender = await this.insertLenderRecord(client, vault.vault_id, depositData);
 
-            const lenderResult = await client.query<VaultLender>(lenderQuery, [
-                vaultId,
-                depositData.lenderAddress,
-                depositData.amount,
-                depositData.txHash
-            ]);
+            // Step 5: Calculate new status
+            const newStatus = this.calculateNewStatus(vault.status, currentCapacity, newCapacity, maxCapacity);
 
-            const lender = lenderResult.rows[0];
-
-            // 3. Update vault current_capacity
-            const newCapacity = parseFloat(vault.current_capacity) + depositData.amount;
-            const updateVaultQuery = `
-                UPDATE "Vaults"
-                SET current_capacity = $1,
-                    modified_at = NOW()
-                WHERE vault_id = $2
-                RETURNING *
-            `;
-
-            const updatedVaultResult = await client.query<Vault>(updateVaultQuery, [
+            // Step 6: Update vault capacity and status
+            const updatedVault = await this.updateVaultCapacityAndStatus(
+                client,
+                vault.vault_id,
                 newCapacity,
-                vaultId
-            ]);
+                newStatus
+            );
 
+            // Step 7: Commit transaction before blockchain interaction
             await client.query('COMMIT');
 
+            // Step 8: If vault is fully funded, release funds to borrower
+            let fundReleased = false;
+            let releaseTxHash: string | undefined;
+
+            if (isFullyFunded) {
+                try {
+                    releaseTxHash = await this.releaseFundsToContract(vaultAddress);
+                    await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
+                    
+                    fundReleased = true;
+                    updatedVault.fund_release_tx_hash = releaseTxHash;
+                    updatedVault.status = VaultStatus.RELEASED;
+
+                } catch (releaseError) {
+                    console.error('❌ Error releasing funds to borrower:', releaseError);
+                    console.log('Vault marked as FUNDED. Manual fund release may be required.');
+                }
+            }
+
             return {
-                vault: updatedVaultResult.rows[0],
-                lender
+                vault: updatedVault,
+                lender,
+                fundReleased,
+                releaseTxHash
             };
         } catch (error) {
             await client.query('ROLLBACK');
@@ -239,7 +384,10 @@ export class VaultService {
                 v.vault_name,
                 v.borrower_address,
                 v.max_capacity,
-                v.current_capacity
+                v.current_capacity,
+                v.status,
+                v.funded_at,
+                v.fund_release_tx_hash
             FROM "VaultLenders" vl
             JOIN "Vaults" v ON vl.vault_id = v.vault_id
             WHERE vl.lender_address = $1
@@ -248,6 +396,91 @@ export class VaultService {
 
         const result = await pool.query(query, [lenderAddress]);
         return result.rows;
+    }
+
+    // Helper: Get vault for manual release
+    private async getVaultForRelease(vaultAddress: string): Promise<any> {
+        const query = `
+            SELECT vault_id, vault_address, borrower_address, status, max_capacity, current_capacity
+            FROM "Vaults"
+            WHERE vault_address = $1
+        `;
+        const result = await pool.query(query, [vaultAddress]);
+
+        if (result.rows.length === 0) {
+            throw new Error(`Vault not found: ${vaultAddress}`);
+        }
+
+        return result.rows[0];
+    }
+
+    // Helper: Validate vault can be manually released
+    private validateVaultForRelease(vault: any): { canRelease: boolean; message: string } {
+        // Validate status
+        const statusValidation = validateVaultStatusForRelease(vault.status);
+        if (!statusValidation.canRelease) {
+            return statusValidation;
+        }
+
+        // Validate capacity
+        const currentCapacity = parseFloat(vault.current_capacity);
+        const maxCapacity = parseFloat(vault.max_capacity);
+        const capacityError = validateVaultCapacityForRelease(currentCapacity, maxCapacity);
+        
+        if (capacityError) {
+            return {
+                canRelease: false,
+                message: capacityError
+            };
+        }
+
+        return {
+            canRelease: true,
+            message: 'Vault is ready for fund release'
+        };
+    }
+
+    async manualReleaseFunds(vaultAddress: string): Promise<{ 
+        success: boolean; 
+        txHash?: string; 
+        vault: Vault;
+        message: string;
+    }> {
+        try {
+            // Step 1: Get vault data
+            const vault = await this.getVaultForRelease(vaultAddress);
+
+            // Step 2: Validate vault can be released
+            const validation = this.validateVaultForRelease(vault);
+            
+            if (!validation.canRelease) {
+                return {
+                    success: false,
+                    vault,
+                    message: validation.message
+                };
+            }
+
+            // Step 3: Release funds via smart contract (reuse existing function)
+            const txHash = await this.releaseFundsToContract(vaultAddress);
+
+            // Step 4: Update vault status (reuse existing function)
+            await this.updateVaultReleaseStatus(vault.vault_id, txHash);
+
+            // Step 5: Get updated vault
+            const updatedVault = await this.getVaultForRelease(vaultAddress);
+
+            return {
+                success: true,
+                txHash,
+                vault: updatedVault,
+                message: 'Funds released successfully to borrower'
+            };
+
+        } catch (error) {
+            console.error('Error in manual fund release:', error);
+            throw error;
+        }
     }
 }
 
