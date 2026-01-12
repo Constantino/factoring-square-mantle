@@ -19,7 +19,7 @@ export function PayModal({
     isOpen,
     onClose,
     onConfirm,
-    maxAmount,
+    totalDebt,
     isProcessing = false,
     processingStep = "Processing...",
     txHash = null,
@@ -70,7 +70,7 @@ export function PayModal({
         const numValue = parseFloat(value);
 
         // If it's a valid number and non-negative, set it
-        // We'll validate against maxAmount in the button disabled condition
+        // We'll validate against totalDebt in the button disabled condition
         if (!isNaN(numValue) && numValue >= 0 && isFinite(numValue)) {
             setAmount(numValue);
         } else {
@@ -81,15 +81,15 @@ export function PayModal({
 
     // Handle MAX button
     const handleMaxClick = () => {
-        if (maxAmount !== undefined) {
-            setAmount(maxAmount);
-            setInputValue(maxAmount.toString());
+        if (totalDebt !== undefined) {
+            setAmount(totalDebt);
+            setInputValue(totalDebt.toString());
         }
     };
 
     // Handle confirm
     const handleConfirm = async () => {
-        if (amount > 0 && (maxAmount === undefined || amount <= maxAmount)) {
+        if (amount > 0 && (totalDebt === undefined || amount <= totalDebt)) {
             setError(null);
             try {
                 await onConfirm(amount);
@@ -119,12 +119,12 @@ export function PayModal({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
-                    {/* Max Amount Information */}
-                    {maxAmount !== undefined && (
+                    {/* Total Debt Information */}
+                    {totalDebt !== undefined && (
                         <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Debt</p>
                             <p className="text-lg font-semibold">
-                                {formatCurrency(maxAmount)}
+                                {formatCurrency(totalDebt)}
                             </p>
                         </div>
                     )}
@@ -154,7 +154,7 @@ export function PayModal({
                     </div>
 
                     {/* MAX button */}
-                    {maxAmount !== undefined && (
+                    {totalDebt !== undefined && (
                         <div className="flex justify-end">
                             <Button
                                 variant="outline"
@@ -179,7 +179,7 @@ export function PayModal({
                     </Button>
                     <Button
                         onClick={handleConfirm}
-                        disabled={amount <= 0 || (maxAmount !== undefined && amount > maxAmount) || isProcessing}
+                        disabled={amount <= 0 || (totalDebt !== undefined && amount > totalDebt) || isProcessing}
                     >
                         {isProcessing ? processingStep : "Confirm Payment"}
                     </Button>
