@@ -193,20 +193,6 @@ export function PayModal({
                         )}
                     </div>
 
-                    {/* MAX button */}
-                    {totalDebt !== undefined && (
-                        <div className="flex justify-end">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleMaxClick}
-                                className="h-7 px-3 text-xs"
-                                disabled={isProcessing}
-                            >
-                                MAX
-                            </Button>
-                        </div>
-                    )}
                 </div>
 
                 <DialogFooter>
