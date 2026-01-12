@@ -326,21 +326,33 @@ export class VaultService {
             // Step 7: Commit transaction before blockchain interaction
             await client.query('COMMIT');
 
-            // Step 8: If vault is fully funded, release funds to borrower
+            // Step 8: If vault appears to be fully funded, verify with smart contract before releasing
             let fundReleased = false;
             let releaseTxHash: string | undefined;
 
             if (isFullyFunded) {
                 try {
-                    releaseTxHash = await this.releaseFundsToContract(vaultAddress);
-                    await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
+                    // CRITICAL: Read actual balance from smart contract to verify it's really funded
+                    console.log('📊 Verifying vault funding status from smart contract...');
+                    const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, this.provider);
+                    const totalAssets = await vaultContract.totalAssets();
+                    const totalAssetsUsdc = parseFloat(ethers.formatUnits(totalAssets, 6));
+                    
+                    console.log(`Smart contract state: totalAssets=${totalAssetsUsdc} USDC, maxCapacity=${maxCapacity} USDC`);
+                    
+                    // Only release if smart contract confirms it's fully funded
+                    if (totalAssetsUsdc >= maxCapacity) {
+                        releaseTxHash = await this.releaseFundsToContract(vaultAddress);
+                        await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
 
-                    fundReleased = true;
-                    updatedVault.fund_release_tx_hash = releaseTxHash;
-                    updatedVault.status = VaultStatus.RELEASED;
+                        fundReleased = true;
+                        updatedVault.fund_release_tx_hash = releaseTxHash;
+                        updatedVault.status = VaultStatus.RELEASED;
 
-                    await loanService.changeLoanStatus(vault.loan_request_id, LoanStatus.ACTIVE);
-
+                        await loanService.changeLoanStatus(vault.loan_request_id, LoanStatus.ACTIVE);
+                    } else {
+                        console.log(`⏳ Vault not yet fully funded in smart contract. totalAssets: ${totalAssetsUsdc}, required: ${maxCapacity}`);
+                    }
                 } catch (releaseError) {
                     console.error('❌ Error releasing funds to borrower:', releaseError);
                     console.log('Vault marked as FUNDED. Manual fund release may be required.');
@@ -539,6 +551,25 @@ export class VaultService {
 
             // Step 4: Check if vault is fully repaid (state == 2 means REPAID in smart contract)
             const isFullyRepaid = vaultState === BigInt(2);
+
+            // Step 4.5: Record repayment in VaultRepayments table
+            console.log(`💾 Recording repayment in database...`);
+            const repaymentInsertQuery = `
+                INSERT INTO "VaultRepayments" (
+                    vault_id,
+                    amount,
+                    tx_hash,
+                    created_at
+                )
+                VALUES ($1, $2, $3, NOW())
+                ON CONFLICT (tx_hash) DO NOTHING
+            `;
+            await pool.query(repaymentInsertQuery, [
+                vault.vault_id,
+                repaymentData.amount,
+                repaymentData.txHash
+            ]);
+            console.log(`✅ Repayment recorded in database`);
 
             // Step 5: Update vault status if fully repaid
             let updatedVault: Vault;

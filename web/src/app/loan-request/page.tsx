@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
@@ -8,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoanRequestPage() {
+    const router = useRouter();
+    const { showToast } = useToast();
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
     const [formData, setFormData] = useState({
         term: "",
@@ -27,7 +31,6 @@ export default function LoanRequestPage() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
-    const [submitSuccess, setSubmitSuccess] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -103,7 +106,6 @@ export default function LoanRequestPage() {
         e.preventDefault();
         setIsSubmitting(true);
         setSubmitError(null);
-        setSubmitSuccess(false);
 
         // Validate wallet address
         if (!walletAddress) {
@@ -157,8 +159,10 @@ export default function LoanRequestPage() {
 
             const response = await axios.post(`${apiUrl}/loan-requests`, submissionData);
 
-            setSubmitSuccess(true);
             console.log("Loan request submitted successfully:", response.data);
+
+            // Show success toast
+            showToast("Loan request submitted successfully!", "success");
 
             // Reset form after successful submission
             setFormData({
@@ -173,6 +177,11 @@ export default function LoanRequestPage() {
                 notPledged: false,
                 authorizeAssignment: false,
             });
+
+            // Redirect to borrower loans page after a brief delay
+            setTimeout(() => {
+                router.push("/borrowers/loans");
+            }, 1000);
         } catch (error) {
             console.error("Error submitting loan request:", error);
             if (axios.isAxiosError(error)) {
@@ -196,7 +205,15 @@ export default function LoanRequestPage() {
                 <h1 className="text-4xl font-bold mb-4 text-foreground">Loan Request</h1>
                 <p className="text-lg text-muted-foreground mb-8">Submit a new loan request for invoice factoring</p>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Show spinner during submission */}
+                {isSubmitting ? (
+                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary"></div>
+                        <p className="text-lg font-medium text-foreground">Submitting loan request...</p>
+                        <p className="text-sm text-muted-foreground">Please wait while we process your request</p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-6">
 
                     {/* Invoice Number */}
                     <div className="space-y-2">
@@ -430,22 +447,14 @@ export default function LoanRequestPage() {
                         </div>
                     )}
 
-                    {/* Success Message */}
-                    {submitSuccess && (
-                        <div className="pt-2 p-4 bg-green-500/10 border border-green-500/20 rounded-md">
-                            <p className="text-sm text-green-600 dark:text-green-400">
-                                Loan request submitted successfully!
-                            </p>
-                        </div>
-                    )}
-
                     {/* Submit Button */}
                     <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isSubmitting || !walletAddress}>
-                            {isSubmitting ? "Submitting..." : "Submit Loan Request"}
+                        <Button type="submit" className="w-full" disabled={!walletAddress}>
+                            Submit Loan Request
                         </Button>
                     </div>
                 </form>
+                )}
             </div>
         </div>
     );

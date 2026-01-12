@@ -197,7 +197,7 @@ export async function participateInVault(
 }
 
 /**
- * Fetch lender portfolio
+ * Fetch lender portfolio with redemption status
  * @param lenderAddress - The address of the lender
  * @returns Promise with array of portfolio items
  * @throws Error if the API call fails
@@ -218,7 +218,55 @@ export async function fetchLenderPortfolio(lenderAddress: string): Promise<Lende
     apiUrl = apiUrl.replace(/\/$/, "");
 
     const response = await axios.get(`${apiUrl}/vaults/lender/${lenderAddress}`);
-    return response.data.data || [];
+    const portfolioData = response.data.data || [];
+
+    // Check each vault to see if the lender has already redeemed their shares
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+    if (!rpcUrl) {
+        console.warn("RPC URL not configured, skipping share balance checks");
+        return portfolioData;
+    }
+
+    try {
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        
+        // Get latest block number to ensure fresh reads
+        const latestBlock = await provider.getBlockNumber();
+        console.log(`Checking share balances at block ${latestBlock}`);
+        
+        // Check share balance for each REPAID vault
+        const enhancedPortfolio = await Promise.all(
+            portfolioData.map(async (item) => {
+                // Only check share balance for REPAID vaults
+                if (item.status === 'REPAID') {
+                    try {
+                        const vaultContract = new ethers.Contract(item.vault_address, VAULT_ABI, provider);
+                        
+                        // Read balance from blockchain
+                        const shareBalance = await vaultContract.balanceOf(lenderAddress);
+                        
+                        console.log(`Vault ${item.vault_address} - Share balance: ${shareBalance.toString()}`);
+                        
+                        // If share balance is 0, the lender has already redeemed
+                        if (shareBalance === BigInt(0)) {
+                            console.log(`✓ Vault ${item.vault_address} marked as REDEEMED`);
+                            return { ...item, status: 'REDEEMED' };
+                        }
+                    } catch (error) {
+                        console.error(`Error checking share balance for vault ${item.vault_address}:`, error);
+                        // Return original item if check fails
+                    }
+                }
+                return item;
+            })
+        );
+
+        return enhancedPortfolio;
+    } catch (error) {
+        console.error("Error checking share balances:", error);
+        // Return original data if check fails
+        return portfolioData;
+    }
 }
 
 /**
@@ -339,6 +387,45 @@ export async function redeemShares(
         };
     } catch (error) {
         console.error("Error redeeming shares:", error);
+        throw error;
+    }
+}
+
+/**
+ * Preview how much USDC will be received when redeeming shares
+ * @param vaultAddress - The address of the vault contract
+ * @param wallet - The Privy wallet object
+ * @returns Promise with the redeemable amount in USDC
+ */
+export async function previewRedemption(
+    vaultAddress: string,
+    wallet: PrivyWallet
+): Promise<number> {
+    try {
+        // Get the Ethereum provider from Privy wallet
+        const provider = await wallet.getEthereumProvider();
+        
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+        const userAddress = await signer.getAddress();
+
+        // Create vault contract instance
+        const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
+
+        // Get user's share balance
+        const shareBalance = await vaultContract.balanceOf(userAddress);
+
+        if (shareBalance === BigInt(0)) {
+            return 0;
+        }
+
+        // Preview how much USDC will be received
+        const previewAssets = await vaultContract.previewRedeem(shareBalance);
+        const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
+
+        return redeemedAmountUsdc;
+    } catch (error) {
+        console.error("Error previewing redemption:", error);
         throw error;
     }
 }

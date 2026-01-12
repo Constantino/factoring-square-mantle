@@ -22,6 +22,7 @@ interface RedeemModalProps {
     isProcessing?: boolean;
     processingStep?: string;
     txHash?: string | null;
+    isLoadingPreview?: boolean;
 }
 
 export function RedeemModal({
@@ -33,8 +34,15 @@ export function RedeemModal({
     isProcessing = false,
     processingStep = "Processing...",
     txHash = null,
+    isLoadingPreview = false,
 }: RedeemModalProps) {
     const [error, setError] = useState<string | null>(null);
+
+    // Calculate profit
+    const profit = redeemableAmount !== undefined ? redeemableAmount - investedAmount : 0;
+    const profitPercentage = investedAmount > 0 && profit !== 0 
+        ? ((profit / investedAmount) * 100).toFixed(2) 
+        : '0.00';
 
     // Reset state when modal opens
     useEffect(() => {
@@ -88,13 +96,47 @@ export function RedeemModal({
                             </p>
                         </div>
 
-                        {redeemableAmount !== undefined && (
+                        {isLoadingPreview ? (
                             <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">You Will Receive</p>
-                                <p className="text-2xl font-bold text-green-600">
-                                    {formatCurrency(redeemableAmount)}
-                                </p>
+                                <p className="text-xs text-muted-foreground">Calculating redemption amount...</p>
+                                <div className="flex items-center space-x-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                    <p className="text-sm text-muted-foreground">Loading...</p>
+                                </div>
                             </div>
+                        ) : redeemableAmount !== undefined && (
+                            <>
+                                {/* Profit/Loss Display */}
+                                <div className="p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-md">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-muted-foreground mb-1">Interest Earned</p>
+                                            <p className={`text-lg font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-muted-foreground mb-1">ROI</p>
+                                            <p className={`text-lg font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {profit >= 0 ? '+' : ''}{profitPercentage}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Total Redemption Amount */}
+                                <div className="border-t pt-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium text-muted-foreground">Total You Will Receive</p>
+                                        <p className="text-3xl font-bold text-green-600">
+                                            {formatCurrency(redeemableAmount)}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            = Investment ({formatCurrency(investedAmount)}) + Interest ({formatCurrency(profit)})
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
 
@@ -110,15 +152,15 @@ export function RedeemModal({
                     <Button
                         variant="outline"
                         onClick={handleClose}
-                        disabled={isProcessing}
+                        disabled={isProcessing || isLoadingPreview}
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleConfirm}
-                        disabled={isProcessing}
+                        disabled={isProcessing || isLoadingPreview || redeemableAmount === undefined}
                     >
-                        {isProcessing ? processingStep : "Confirm Redemption"}
+                        {isProcessing ? processingStep : isLoadingPreview ? "Calculating..." : "Confirm Redemption"}
                     </Button>
                 </DialogFooter>
 

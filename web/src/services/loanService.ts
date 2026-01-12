@@ -127,7 +127,8 @@ export function calculateInterest(request: LoanRequestWithVault): number {
         return 0;
     }
 
-    return interest;
+    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
+    return Math.round(interest * 1e6) / 1e6;
 }
 
 /**
@@ -162,7 +163,9 @@ export function getTotalDebt(request: LoanRequestWithVault): number {
         return maxLoan;
     }
 
-    return total;
+    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
+    // This prevents errors like "0.8076000000000001" when passing to ethers.parseUnits
+    return Math.round(total * 1e6) / 1e6;
 }
 
 /**

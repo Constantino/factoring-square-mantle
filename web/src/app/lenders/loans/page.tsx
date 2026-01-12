@@ -7,7 +7,7 @@ import { useWalletAddress } from "@/hooks/use-wallet-address";
 import { PortfolioTable } from "@/components/portfolio-table";
 import { RedeemModal } from "@/components/redeem-modal";
 import { LenderPortfolio } from "@/types/vault";
-import { fetchLenderPortfolio, redeemShares } from "@/services/vault";
+import { fetchLenderPortfolio, redeemShares, previewRedemption } from "@/services/vault";
 
 export default function LenderLoansPage() {
     const { walletAddress } = useWalletAddress();
@@ -23,6 +23,7 @@ export default function LenderLoansPage() {
     const [redeemStep, setRedeemStep] = useState<string>("Processing...");
     const [redeemTxHash, setRedeemTxHash] = useState<string | null>(null);
     const [redeemableAmount, setRedeemableAmount] = useState<number | undefined>(undefined);
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
     useEffect(() => {
         if (walletAddress) {
@@ -58,11 +59,34 @@ export default function LenderLoansPage() {
         }
     };
 
-    const handleRedeem = (vaultAddress: string, investedAmount: number) => {
+    const handleRedeem = async (vaultAddress: string, investedAmount: number) => {
         setSelectedVault({ address: vaultAddress, amount: investedAmount });
-        setRedeemableAmount(undefined); // Will be calculated during redemption
+        setRedeemableAmount(undefined);
         setIsRedeemModalOpen(true);
         setRedeemTxHash(null);
+
+        // Preview redemption amount
+        if (!wallets || wallets.length === 0) {
+            console.error("No wallet connected for preview");
+            return;
+        }
+
+        const wallet = wallets[0];
+        if (!wallet) {
+            console.error("Wallet not available for preview");
+            return;
+        }
+
+        try {
+            setIsLoadingPreview(true);
+            const previewAmount = await previewRedemption(vaultAddress, wallet);
+            setRedeemableAmount(previewAmount);
+        } catch (error) {
+            console.error("Error previewing redemption:", error);
+            // Don't block modal opening if preview fails
+        } finally {
+            setIsLoadingPreview(false);
+        }
     };
 
     const handleRedeemConfirm = async () => {
@@ -88,6 +112,9 @@ export default function LenderLoansPage() {
             setRedeemTxHash(result.txHash);
             setRedeemableAmount(result.redeemedAmount);
 
+            // Wait for blockchain state to update before refreshing
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
             // Refresh portfolio after successful redemption
             await fetchPortfolioData();
 
@@ -139,6 +166,7 @@ export default function LenderLoansPage() {
                         isProcessing={isRedeeming}
                         processingStep={redeemStep}
                         txHash={redeemTxHash}
+                        isLoadingPreview={isLoadingPreview}
                     />
                 )}
             </div>

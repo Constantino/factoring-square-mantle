@@ -48,9 +48,9 @@ export function AppSidebar() {
             roles: ['Admin'],
         },
         {
-            title: "Borrower KYB",
-            url: "/borrower-kyb",
-            icon: Building2,
+            title: "My loans",
+            url: "/borrowers/loans",
+            icon: CreditCard,
             roles: ['Admin', 'Borrower'],
         },
         {
@@ -60,9 +60,9 @@ export function AppSidebar() {
             roles: ['Admin', 'Borrower'],
         },
         {
-            title: "My loans",
-            url: "/borrowers/loans",
-            icon: CreditCard,
+            title: "Borrower KYB",
+            url: "/borrower-kyb",
+            icon: Building2,
             roles: ['Admin', 'Borrower'],
         },
         {

@@ -99,7 +99,9 @@ export function PortfolioTable({
                                         </td>
                                         <td className="py-3 px-4 text-xs">
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                item.status === 'REPAID' 
+                                                item.status === 'REDEEMED'
+                                                    ? 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
+                                                    : item.status === 'REPAID' 
                                                     ? 'bg-green-500/10 text-green-600 border border-green-500/20'
                                                     : item.status === 'RELEASED'
                                                     ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
@@ -124,7 +126,7 @@ export function PortfolioTable({
                                             </a>
                                         </td>
                                         <td className="py-3 px-4 text-xs">
-                                            {item.status === 'REPAID' && onRedeem && (
+                                            {item.status === 'REPAID' && onRedeem ? (
                                                 <Button
                                                     size="sm"
                                                     onClick={() => onRedeem(item.vault_address, parseFloat(item.amount))}
@@ -132,7 +134,9 @@ export function PortfolioTable({
                                                 >
                                                     Redeem
                                                 </Button>
-                                            )}
+                                            ) : item.status === 'REDEEMED' ? (
+                                                <span className="text-xs text-muted-foreground">Completed</span>
+                                            ) : null}
                                         </td>
                                     </tr>
                                 ))
