@@ -12,14 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorPanel } from "@/components/error-panel";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatPercentage } from "@/lib/format";
 import { PayModalProps } from "@/types/payModalProps";
+import { calculateDaysSinceFundRelease } from "@/services/loanService";
 
 export function PayModal({
     isOpen,
     onClose,
     onConfirm,
     totalDebt,
+    maxLoan,
+    monthlyInterestRate,
+    vaultFundReleaseAt,
+    invoiceDueDate,
     isProcessing = false,
     processingStep = "Processing...",
     txHash = null,
@@ -119,13 +124,48 @@ export function PayModal({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
-                    {/* Total Debt Information */}
+                    {/* Total Debt Breakdown */}
                     {totalDebt !== undefined && (
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Debt</p>
-                            <p className="text-lg font-semibold">
-                                {formatCurrency(totalDebt)}
-                            </p>
+                        <div className="space-y-3">
+                            <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Total Debt</p>
+                                <p className="text-lg font-semibold">
+                                    {formatCurrency(totalDebt)}
+                                </p>
+                            </div>
+
+                            {/* Breakdown */}
+                            <div className="border-t border-border pt-3 space-y-2">
+                                {vaultFundReleaseAt && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Days since funds released:</span>
+                                        <span className="text-foreground font-medium">
+                                            {calculateDaysSinceFundRelease(vaultFundReleaseAt)}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {maxLoan !== undefined && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Original loan:</span>
+                                        <span className="text-foreground font-medium">{formatCurrency(maxLoan)}</span>
+                                    </div>
+                                )}
+
+                                {monthlyInterestRate !== undefined && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Monthly interest rate:</span>
+                                        <span className="text-foreground font-medium">{formatPercentage(monthlyInterestRate)}</span>
+                                    </div>
+                                )}
+
+                                {totalDebt !== undefined && maxLoan !== undefined && totalDebt > maxLoan && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Interest accrued:</span>
+                                        <span className="text-foreground font-medium">{formatCurrency(totalDebt - maxLoan)}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

@@ -220,6 +220,10 @@ export function LoansTable({
                     onClose={closePayModal}
                     onConfirm={handlePayConfirm}
                     totalDebt={getTotalDebt(selectedRequest) || selectedRequest.max_loan || 0}
+                    maxLoan={selectedRequest.max_loan}
+                    monthlyInterestRate={selectedRequest.monthly_interest_rate}
+                    vaultFundReleaseAt={selectedRequest.vault_fund_release_at}
+                    invoiceDueDate={selectedRequest.invoice_due_date}
                     isProcessing={isProcessing}
                     processingStep={processingStep}
                     txHash={txHash}
