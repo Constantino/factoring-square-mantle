@@ -48,6 +48,95 @@ export async function getLoanRequestsByBorrowerWithVaults(
 }
 
 /**
+ * Calculate interest based on the formula:
+ * numberOfDays(loanrequest.invoice_due_date - vault.fund_release_at) * (loanRequest.monthly_interest_rate / 30) * max_loan
+ * @param request - The loan request with vault information
+ * @returns The calculated interest amount
+ */
+export function calculateInterest(request: LoanRequestWithVault): number {
+    console.log('request.vault_fund_release_at', request.vault_fund_release_at);
+    // If fund_release_at is not available, return 0 interest (funds haven't been released yet)
+    if (!request.vault_fund_release_at) {
+        return 0;
+    }
+
+    console.log('request.invoice_due_date', request.invoice_due_date);
+    // Validate required fields
+    if (!request.invoice_due_date) {
+        return 0;
+    }
+
+    console.log('request.max_loan', request.max_loan);
+
+
+    const invoiceDueDate = new Date(request.invoice_due_date);
+    const fundReleaseDate = new Date(request.vault_fund_release_at);
+    console.log('invoiceDueDate', invoiceDueDate);
+    console.log('fundReleaseDate', fundReleaseDate);
+
+    // Validate dates are valid
+    if (isNaN(invoiceDueDate.getTime()) || isNaN(fundReleaseDate.getTime())) {
+        return 0;
+    }
+
+    // Calculate number of days between fund release and invoice due date
+    const timeDiff = invoiceDueDate.getTime() - fundReleaseDate.getTime();
+    const numberOfDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+    // If days is negative or zero, return 0 interest
+    if (numberOfDays <= 0 || isNaN(numberOfDays)) {
+        return 0;
+    }
+
+    // Calculate interest: numberOfDays * (monthly_interest_rate / 30) * max_loan
+    // monthly_interest_rate is stored as a decimal (e.g., 0.05 for 5%)
+    const dailyInterestRate = request.monthly_interest_rate / 30;
+    const interest = numberOfDays * dailyInterestRate * request.max_loan;
+
+    // Ensure result is a valid number
+    if (isNaN(interest) || !isFinite(interest)) {
+        return 0;
+    }
+
+    return interest;
+}
+
+/**
+ * Calculate total debt (full loan amount + interest)
+ * @param request - The loan request with vault information
+ * @returns The total debt amount (principal + interest)
+ */
+export function getTotalDebt(request: LoanRequestWithVault): number {
+    // Ensure max_loan is a valid number - handle both number and string types
+    let maxLoan = 0;
+    if (typeof request.max_loan === 'number') {
+        maxLoan = !isNaN(request.max_loan) && isFinite(request.max_loan) ? request.max_loan : 0;
+    } else if (typeof request.max_loan === 'string') {
+        const parsed = parseFloat(request.max_loan);
+        maxLoan = !isNaN(parsed) && isFinite(parsed) ? parsed : 0;
+    }
+
+    // If max_loan is 0 or invalid, return 0
+    if (maxLoan <= 0) {
+        console.warn('getTotalDebt: max_loan is invalid or 0', { max_loan: request.max_loan, request });
+        return 0;
+    }
+
+    // Calculate interest (will return 0 if fund_release_at is not available)
+    const interest = calculateInterest(request);
+    console.log('interest', interest);
+    // Total debt = principal + interest
+    const total = maxLoan + interest;
+
+    // Ensure result is a valid number, fallback to max_loan if calculation fails
+    if (isNaN(total) || !isFinite(total) || total <= 0) {
+        return maxLoan;
+    }
+
+    return total;
+}
+
+/**
  * Repay a loan by transferring USDC to the vault
  * @param vaultAddress - The address of the vault contract
  * @param amount - The amount to repay (in USD, will be converted to wei)
