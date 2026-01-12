@@ -4,6 +4,7 @@ export enum VaultStatus {
     FUNDED = 'FUNDED',
     RELEASED = 'RELEASED',
     REPAID = 'REPAID',
+    REDEEMED = 'REDEEMED',
     MATURED = 'MATURED',
     DEFAULTED = 'DEFAULTED'
 }

@@ -381,6 +381,27 @@ export async function redeemShares(
 
         onProgress?.("✅ Redemption successful!");
 
+        // Record redemption in backend database
+        try {
+            onProgress?.("Recording redemption...");
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const fullUrl = apiUrl.startsWith('http') ? apiUrl : `http://${apiUrl}`;
+
+            await axios.post(
+                `${fullUrl}/vaults/${vaultAddress}/redemptions`,
+                {
+                    lenderAddress: userAddress,
+                    amount: redeemedAmountUsdc,
+                    txHash: redeemTx.hash
+                }
+            );
+            console.log('Redemption recorded in database');
+        } catch (dbError) {
+            // Log error but don't fail the transaction
+            console.error('Failed to record redemption in database:', dbError);
+            // Transaction succeeded on-chain, so we still return the result
+        }
+
         return {
             txHash: redeemTx.hash,
             redeemedAmount: redeemedAmountUsdc

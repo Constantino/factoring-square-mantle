@@ -621,6 +621,100 @@ export class VaultService {
             throw error;
         }
     }
+
+    async trackRedemption(
+        vaultAddress: string,
+        redemptionData: { lenderAddress: string; amount: number; txHash: string }
+    ): Promise<{ vault: Vault; message: string }> {
+        try {
+            // Step 1: Get vault data
+            const query = `
+                SELECT vault_id, vault_address, borrower_address, status, max_capacity, current_capacity
+                FROM "Vaults"
+                WHERE vault_address = $1
+            `;
+            const result = await pool.query(query, [vaultAddress]);
+
+            if (result.rows.length === 0) {
+                throw new Error(`Vault not found: ${vaultAddress}`);
+            }
+
+            const vault = result.rows[0];
+
+            // Step 2: Validate vault status (must be REPAID)
+            if (vault.status !== VaultStatus.REPAID) {
+                throw new Error(`Vault must be in REPAID status to track redemption. Current status: ${vault.status}`);
+            }
+
+            // Step 3: Read share balance from smart contract to verify redemption
+            console.log(`📖 Verifying redemption from smart contract: ${vaultAddress}`);
+            const vaultContract = new ethers.Contract(
+                vaultAddress,
+                VAULT_ABI,
+                this.provider
+            );
+
+            const shareBalance = await vaultContract.balanceOf(redemptionData.lenderAddress);
+            console.log(`📊 Lender ${redemptionData.lenderAddress} share balance: ${shareBalance.toString()}`);
+
+            // Step 4: Check if all lenders have redeemed their shares
+            // Get all lenders for this vault
+            const lendersQuery = `
+                SELECT DISTINCT lender_address
+                FROM "VaultLenders"
+                WHERE vault_id = $1
+            `;
+            const lendersResult = await pool.query(lendersQuery, [vault.vault_id]);
+            const lenderAddresses = lendersResult.rows.map(row => row.lender_address);
+
+            // Check each lender's share balance
+            let allRedeemed = true;
+            for (const lenderAddr of lenderAddresses) {
+                const balance = await vaultContract.balanceOf(lenderAddr);
+                if (balance > BigInt(0)) {
+                    allRedeemed = false;
+                    console.log(`📊 Lender ${lenderAddr} still has ${balance.toString()} shares`);
+                    break;
+                }
+            }
+
+            console.log(`📊 All lenders redeemed: ${allRedeemed}`);
+
+            // Step 5: Update vault status if all shares have been redeemed
+            let updatedVault: Vault;
+
+            if (allRedeemed) {
+                console.log(`✅ All shares redeemed. Updating vault status to REDEEMED...`);
+                const updateQuery = `
+                    UPDATE "Vaults"
+                    SET status = $1,
+                        modified_at = NOW()
+                    WHERE vault_id = $2
+                    RETURNING *
+                `;
+                const updateResult = await pool.query<Vault>(updateQuery, [
+                    VaultStatus.REDEEMED,
+                    vault.vault_id
+                ]);
+                updatedVault = updateResult.rows[0];
+
+                return {
+                    vault: updatedVault,
+                    message: 'Redemption tracked successfully. All shares have been redeemed and vault is now closed.'
+                };
+            } else {
+                console.log(`📝 Partial redemption tracked. Some lenders still have shares...`);
+                // Just return the vault as is - no status change needed
+                return {
+                    vault,
+                    message: 'Redemption tracked successfully. Some lenders still need to redeem their shares.'
+                };
+            }
+        } catch (error) {
+            console.error('Error tracking redemption:', error);
+            throw error;
+        }
+    }
 }
 
 export const vaultService = new VaultService();
