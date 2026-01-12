@@ -1,0 +1,10 @@
+import { LoanRequestWithVault } from "./loanRequestWithVault";
+
+export interface LoansTableProps {
+    loanRequests: LoanRequestWithVault[];
+    isLoading: boolean;
+    error: string | null;
+    onView: (requestId: number) => void;
+    onPay: (requestId: number, amount: number, onProgress?: (step: string) => void) => Promise<string>;
+}
+

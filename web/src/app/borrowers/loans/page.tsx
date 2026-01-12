@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
-import { LoanRequestWithVault } from "@/types/loan";
+import { LoanRequestWithVault } from "@/types/loans";
 import { getLoanRequestsByBorrowerWithVaults, repayLoan } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
@@ -70,11 +70,6 @@ export default function LoanDashboardPage() {
     const handleView = (requestId: number) => {
         // TODO: Implement view functionality
         console.log("View request:", requestId);
-    };
-
-    const handleWithdrawRequest = (requestId: number) => {
-        // TODO: Implement withdraw request functionality
-        console.log("Withdraw request:", requestId);
     };
 
     const handlePayLoan = async (requestId: number, amount: number, onProgress?: (step: string) => void): Promise<string> => {
@@ -217,7 +212,6 @@ export default function LoanDashboardPage() {
                     isLoading={isLoading}
                     error={error}
                     onView={handleView}
-                    onWithdraw={handleWithdrawRequest}
                     onPay={handlePayLoan}
                 />
             </div>

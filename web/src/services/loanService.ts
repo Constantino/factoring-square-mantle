@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ethers } from "ethers";
 import { getApiUrl } from "@/lib/api";
-import { LoanRequest, LoanRequestWithVault } from "@/types/loan";
+import { LoanRequest, LoanRequestWithVault } from "@/types/loans";
 import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import { PrivyWallet } from "@/types/providers";
@@ -45,6 +45,124 @@ export async function getLoanRequestsByBorrowerWithVaults(
     );
 
     return response.data.data || [];
+}
+
+/**
+ * Calculate the number of days between two dates
+ * @param startDate - Start date (string or Date object)
+ * @param endDate - End date (string or Date object)
+ * @returns Number of days between the dates, or 0 if invalid
+ */
+export function calculateDaysBetweenDates(startDate: string | Date, endDate: string | Date): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Validate dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return 0;
+    }
+
+    // Calculate number of days
+    const timeDiff = end.getTime() - start.getTime();
+    const numberOfDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+    // Return 0 if days is negative or NaN
+    if (numberOfDays <= 0 || isNaN(numberOfDays)) {
+        return 0;
+    }
+
+    return numberOfDays;
+}
+
+/**
+ * Calculate the number of days since funds were released
+ * @param fundReleaseAt - Date when funds were released (string or null)
+ * @returns Number of days since funds were released, or 0 if not released or invalid
+ */
+export function calculateDaysSinceFundRelease(fundReleaseAt: string | null): number {
+    if (!fundReleaseAt) {
+        return 0;
+    }
+
+    const today = new Date();
+    return calculateDaysBetweenDates(fundReleaseAt, today);
+}
+
+/**
+ * Calculate interest based on the formula:
+ * numberOfDays(loanrequest.invoice_due_date - vault.fund_release_at) * (loanRequest.monthly_interest_rate / 30) * max_loan
+ * @param request - The loan request with vault information
+ * @returns The calculated interest amount
+ */
+export function calculateInterest(request: LoanRequestWithVault): number {
+    console.log('request.vault_fund_release_at', request.vault_fund_release_at);
+    // If fund_release_at is not available, return 0 interest (funds haven't been released yet)
+    if (!request.vault_fund_release_at) {
+        return 0;
+    }
+
+    console.log('request.invoice_due_date', request.invoice_due_date);
+    // Validate required fields
+    if (!request.invoice_due_date) {
+        return 0;
+    }
+
+    console.log('request.max_loan', request.max_loan);
+
+    // Calculate number of days between fund release and invoice due date
+    const numberOfDays = calculateDaysBetweenDates(request.vault_fund_release_at, request.invoice_due_date);
+
+    // If days is zero, return 0 interest
+    if (numberOfDays === 0) {
+        return 0;
+    }
+
+    // Calculate interest: numberOfDays * (monthly_interest_rate / 30) * max_loan
+    // monthly_interest_rate is stored as a decimal (e.g., 0.05 for 5%)
+    const dailyInterestRate = request.monthly_interest_rate / 30;
+    const interest = numberOfDays * dailyInterestRate * request.max_loan;
+
+    // Ensure result is a valid number
+    if (isNaN(interest) || !isFinite(interest)) {
+        return 0;
+    }
+
+    return interest;
+}
+
+/**
+ * Calculate total debt (full loan amount + interest)
+ * @param request - The loan request with vault information
+ * @returns The total debt amount (principal + interest)
+ */
+export function getTotalDebt(request: LoanRequestWithVault): number {
+    // Ensure max_loan is a valid number - handle both number and string types
+    let maxLoan = 0;
+    if (typeof request.max_loan === 'number') {
+        maxLoan = !isNaN(request.max_loan) && isFinite(request.max_loan) ? request.max_loan : 0;
+    } else if (typeof request.max_loan === 'string') {
+        const parsed = parseFloat(request.max_loan);
+        maxLoan = !isNaN(parsed) && isFinite(parsed) ? parsed : 0;
+    }
+
+    // If max_loan is 0 or invalid, return 0
+    if (maxLoan <= 0) {
+        console.warn('getTotalDebt: max_loan is invalid or 0', { max_loan: request.max_loan, request });
+        return 0;
+    }
+
+    // Calculate interest (will return 0 if fund_release_at is not available)
+    const interest = calculateInterest(request);
+    console.log('interest', interest);
+    // Total debt = principal + interest
+    const total = maxLoan + interest;
+
+    // Ensure result is a valid number, fallback to max_loan if calculation fails
+    if (isNaN(total) || !isFinite(total) || total <= 0) {
+        return maxLoan;
+    }
+
+    return total;
 }
 
 /**

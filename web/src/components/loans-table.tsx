@@ -5,15 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { PayModal } from "@/components/pay-modal";
-import { LoansTableProps, LoanRequestWithVault } from "@/types/loan";
+import { LoansTableProps, LoanRequestWithVault, LoanRequestStatus } from "@/types/loans";
 import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, truncateAddress } from "@/lib/format";
+import { getTotalDebt } from "@/services/loanService";
 
 export function LoansTable({
     loanRequests,
     isLoading,
     error,
     onView,
-    onWithdraw,
     onPay,
 }: LoansTableProps) {
     const [payModalOpen, setPayModalOpen] = useState(false);
@@ -64,11 +64,6 @@ export function LoansTable({
         }
     };
 
-    // Calculate max amount (full loan amount)
-    const getMaxAmount = (request: LoanRequestWithVault): number => {
-        // Max amount is the full max loan value
-        return request.max_loan;
-    };
     return (
         <Card
             initial={false}
@@ -195,15 +190,8 @@ export function LoansTable({
                                                     variant="outline"
                                                     size="sm"
                                                     className="text-xs"
-                                                    onClick={() => onWithdraw(request.id)}
-                                                >
-                                                    Withdraw
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-xs"
                                                     onClick={() => openPayModal(request)}
+                                                    disabled={request.status !== LoanRequestStatus.ACTIVE}
                                                 >
                                                     Pay
                                                 </Button>
@@ -223,7 +211,11 @@ export function LoansTable({
                     isOpen={payModalOpen}
                     onClose={closePayModal}
                     onConfirm={handlePayConfirm}
-                    maxAmount={getMaxAmount(selectedRequest)}
+                    totalDebt={getTotalDebt(selectedRequest) || selectedRequest.max_loan || 0}
+                    maxLoan={selectedRequest.max_loan}
+                    monthlyInterestRate={selectedRequest.monthly_interest_rate}
+                    vaultFundReleaseAt={selectedRequest.vault_fund_release_at}
+                    invoiceDueDate={selectedRequest.invoice_due_date}
                     isProcessing={isProcessing}
                     processingStep={processingStep}
                     txHash={txHash}

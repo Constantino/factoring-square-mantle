@@ -28,6 +28,7 @@ export interface LoanRequestWithVault extends LoanRequest {
     loan_request_id: number;
     vault_created_at: string;
     vault_modified_at: string;
+    vault_fund_release_at: string | null;
 }
 
 export interface LoansTableProps {
@@ -35,7 +36,6 @@ export interface LoansTableProps {
     isLoading: boolean;
     error: string | null;
     onView: (requestId: number) => void;
-    onWithdraw: (requestId: number) => void;
     onPay: (requestId: number, amount: number, onProgress?: (step: string) => void) => Promise<string>;
 }
 
