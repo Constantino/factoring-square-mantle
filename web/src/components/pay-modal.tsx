@@ -10,7 +10,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ErrorPanel } from "@/components/error-panel";
 import { formatCurrency, formatPercentage } from "@/lib/format";
 import { PayModalProps } from "@/types/payModalProps";
@@ -29,75 +28,27 @@ export function PayModal({
     processingStep = "Processing...",
     txHash = null,
 }: PayModalProps) {
-    const [amount, setAmount] = useState<number>(0);
-    const [inputValue, setInputValue] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
 
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
-            setAmount(0);
-            setInputValue("");
             setError(null);
         }
     }, [isOpen]);
 
     // Handle close - reset state when closing
     const handleClose = () => {
-        setAmount(0);
-        setInputValue("");
         setError(null);
         onClose();
     };
 
-    // Handle input change
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value;
-
-        // Remove any non-numeric characters except decimal point
-        // Allow: digits, one decimal point, and empty string
-        value = value.replace(/[^0-9.]/g, '');
-
-        // Ensure only one decimal point
-        const parts = value.split('.');
-        if (parts.length > 2) {
-            value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        setInputValue(value);
-
-        // Handle empty input or just a decimal point
-        if (value === "" || value === ".") {
-            setAmount(0);
-            return;
-        }
-
-        const numValue = parseFloat(value);
-
-        // If it's a valid number and non-negative, set it
-        // We'll validate against totalDebt in the button disabled condition
-        if (!isNaN(numValue) && numValue >= 0 && isFinite(numValue)) {
-            setAmount(numValue);
-        } else {
-            // Invalid number, set amount to 0
-            setAmount(0);
-        }
-    };
-
-    // Handle MAX button
-    const handleMaxClick = () => {
-        if (totalDebt !== undefined) {
-            setAmount(totalDebt);
-            setInputValue(totalDebt.toString());
-        }
-    };
-
-    // Handle confirm
+    // Handle confirm - use totalDebt as the payment amount
     const handleConfirm = async () => {
-        if (amount > 0 && (totalDebt === undefined || amount <= totalDebt)) {
+        if (totalDebt !== undefined && totalDebt > 0) {
             setError(null);
             try {
-                await onConfirm(amount);
+                await onConfirm(totalDebt);
             } catch (err) {
                 const errorMessage = err instanceof Error
                     ? err.message.includes('user rejected') || err.message.includes('User denied')
@@ -118,9 +69,6 @@ export function PayModal({
             >
                 <DialogHeader>
                     <DialogTitle>Pay Loan</DialogTitle>
-                    <DialogDescription>
-                        Enter the amount in USDC you want to pay towards this loan
-                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
@@ -169,30 +117,6 @@ export function PayModal({
                         </div>
                     )}
 
-                    {/* Input Field */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Payment Amount (USDC)</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                $
-                            </span>
-                            <Input
-                                type="text"
-                                inputMode="decimal"
-                                value={inputValue}
-                                onChange={handleInputChange}
-                                className="pl-7"
-                                placeholder="0.00"
-                                disabled={isProcessing}
-                            />
-                        </div>
-                        {amount > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                                You are paying {formatCurrency(amount)} USDC
-                            </p>
-                        )}
-                    </div>
-
                 </div>
 
                 <DialogFooter>
@@ -205,7 +129,7 @@ export function PayModal({
                     </Button>
                     <Button
                         onClick={handleConfirm}
-                        disabled={amount <= 0 || (totalDebt !== undefined && amount > totalDebt) || isProcessing}
+                        disabled={totalDebt === undefined || totalDebt <= 0 || isProcessing}
                     >
                         {isProcessing ? processingStep : "Confirm Payment"}
                     </Button>
