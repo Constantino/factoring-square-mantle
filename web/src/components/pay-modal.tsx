@@ -119,21 +119,23 @@ export function PayModal({
 
                 </div>
 
-                <DialogFooter>
-                    <Button
-                        variant="outline"
-                        onClick={handleClose}
-                        disabled={isProcessing}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleConfirm}
-                        disabled={totalDebt === undefined || totalDebt <= 0 || isProcessing}
-                    >
-                        {isProcessing ? processingStep : "Confirm Payment"}
-                    </Button>
-                </DialogFooter>
+                {!txHash && (
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={handleClose}
+                            disabled={isProcessing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleConfirm}
+                            disabled={totalDebt === undefined || totalDebt <= 0 || isProcessing}
+                        >
+                            {isProcessing ? processingStep : "Confirm Payment"}
+                        </Button>
+                    </DialogFooter>
+                )}
 
                 {/* Success Message with Transaction Link */}
                 {txHash && (
