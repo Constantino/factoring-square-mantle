@@ -3,6 +3,10 @@ export interface PayModalProps {
     onClose: () => void;
     onConfirm: (amount: number) => Promise<void>;
     totalDebt?: number;
+    maxLoan?: number;
+    monthlyInterestRate?: number;
+    vaultFundReleaseAt?: string | null;
+    invoiceDueDate?: string;
     isProcessing?: boolean;
     processingStep?: string;
     txHash?: string | null;
