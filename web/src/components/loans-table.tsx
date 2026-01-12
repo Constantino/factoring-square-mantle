@@ -7,6 +7,7 @@ import { CopyButton } from "@/components/copy-button";
 import { PayModal } from "@/components/pay-modal";
 import { LoansTableProps, LoanRequestWithVault } from "@/types/loan";
 import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, truncateAddress } from "@/lib/format";
+import { getTotalDebt } from "@/services/loanService";
 
 export function LoansTable({
     loanRequests,
@@ -64,11 +65,6 @@ export function LoansTable({
         }
     };
 
-    // Calculate max amount (full loan amount)
-    const getMaxAmount = (request: LoanRequestWithVault): number => {
-        // Max amount is the full max loan value
-        return request.max_loan;
-    };
     return (
         <Card
             initial={false}
@@ -223,7 +219,7 @@ export function LoansTable({
                     isOpen={payModalOpen}
                     onClose={closePayModal}
                     onConfirm={handlePayConfirm}
-                    maxAmount={getMaxAmount(selectedRequest)}
+                    totalDebt={getTotalDebt(selectedRequest) || selectedRequest.max_loan || 0}
                     isProcessing={isProcessing}
                     processingStep={processingStep}
                     txHash={txHash}
