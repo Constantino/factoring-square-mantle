@@ -280,7 +280,8 @@ export class VaultService {
             UPDATE "Vaults"
             SET fund_release_tx_hash = $1,
                 status = $2,
-                modified_at = NOW()
+                modified_at = NOW(),
+                fund_release_at = NOW()
             WHERE vault_id = $3
         `;
 
