@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useWallets } from "@privy-io/react-auth";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
-import { LoanRequest } from "@/types/loan";
-import { getLoanRequestsByBorrower } from "@/service/loanService";
+import { LoanRequestWithVault } from "@/types/loan";
+import { getLoanRequestsByBorrowerWithVaults, repayLoan } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
+    const { wallets } = useWallets();
     const [copied, setCopied] = useState(false);
-    const [loanRequests, setLoanRequests] = useState<LoanRequest[]>([]);
+    const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const creditScore = 725; // Example score - can be made dynamic later
@@ -34,7 +36,7 @@ export default function LoanDashboardPage() {
             setIsLoading(true);
             setError(null);
 
-            const data = await getLoanRequestsByBorrower(walletAddress);
+            const data = await getLoanRequestsByBorrowerWithVaults(walletAddress);
             setLoanRequests(data);
         } catch (err) {
             console.error("Error fetching loan requests:", err);
@@ -75,9 +77,46 @@ export default function LoanDashboardPage() {
         console.log("Withdraw request:", requestId);
     };
 
-    const handlePayLoan = (requestId: number) => {
-        // TODO: Implement pay loan functionality
-        console.log("Pay loan:", requestId);
+    const handlePayLoan = async (requestId: number, amount: number, onProgress?: (step: string) => void): Promise<string> => {
+        if (!wallets || wallets.length === 0) {
+            throw new Error("No wallet connected. Please connect a wallet first.");
+        }
+
+        // Find the loan request by ID
+        const loanRequest = loanRequests.find(req => req.id === requestId);
+        if (!loanRequest) {
+            throw new Error(`Loan request with ID ${requestId} not found`);
+        }
+
+        // Check if vault address exists
+        if (!loanRequest.vault_address) {
+            throw new Error("Vault address not found for this loan request");
+        }
+
+        // Get the first wallet (Privy wallet)
+        const wallet = wallets[0];
+        if (!wallet) {
+            throw new Error("Wallet not available");
+        }
+
+        try {
+            onProgress?.("Starting loan repayment...");
+            const txHash = await repayLoan(
+                loanRequest.vault_address,
+                amount,
+                wallet,
+                loanRequest.id,
+                onProgress
+            );
+
+            // Refresh loan requests after successful repayment
+            await fetchLoanRequests();
+
+            return txHash;
+        } catch (error) {
+            console.error("Error repaying loan:", error);
+            throw error;
+        }
     };
 
     return (

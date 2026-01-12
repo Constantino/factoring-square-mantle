@@ -1,18 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LoanRequest } from "@/types/loan";
-import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus } from "@/lib/format";
-
-interface LoansTableProps {
-    loanRequests: LoanRequest[];
-    isLoading: boolean;
-    error: string | null;
-    onView: (requestId: number) => void;
-    onWithdraw: (requestId: number) => void;
-    onPay: (requestId: number) => void;
-}
+import { CopyButton } from "@/components/copy-button";
+import { PayModal } from "@/components/pay-modal";
+import { LoansTableProps, LoanRequestWithVault } from "@/types/loan";
+import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, truncateAddress } from "@/lib/format";
 
 export function LoansTable({
     loanRequests,
@@ -22,6 +16,59 @@ export function LoansTable({
     onWithdraw,
     onPay,
 }: LoansTableProps) {
+    const [payModalOpen, setPayModalOpen] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<LoanRequestWithVault | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [txHash, setTxHash] = useState<string | null>(null);
+    const [processingStep, setProcessingStep] = useState<string>("Processing payment...");
+
+    const openPayModal = (request: LoanRequestWithVault) => {
+        setSelectedRequest(request);
+        setPayModalOpen(true);
+        setTxHash(null);
+        setIsProcessing(false);
+        setProcessingStep("Processing payment...");
+    };
+
+    const closePayModal = () => {
+        setPayModalOpen(false);
+        setSelectedRequest(null);
+        setTxHash(null);
+        setIsProcessing(false);
+        setProcessingStep("Processing payment...");
+    };
+
+    const handlePayConfirm = async (amount: number) => {
+        if (!selectedRequest) return;
+
+        setIsProcessing(true);
+        setTxHash(null);
+        setProcessingStep("Processing payment...");
+
+        try {
+            const hash = await onPay(
+                selectedRequest.id,
+                amount,
+                (step: string) => {
+                    setProcessingStep(step);
+                }
+            );
+            setTxHash(hash);
+            // Don't close modal immediately - let user see the success message
+            // The modal will show the transaction hash
+        } catch (error) {
+            // Error is handled by the modal's ErrorPanel
+            throw error;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Calculate max amount (full loan amount)
+    const getMaxAmount = (request: LoanRequestWithVault): number => {
+        // Max amount is the full max loan value
+        return request.max_loan;
+    };
     return (
         <Card
             initial={false}
@@ -57,6 +104,12 @@ export function LoansTable({
                                     Max Loan
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                    Funding
+                                </th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
+                                    Vault Address
+                                </th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
                                     Status
                                 </th>
                                 <th className="text-left py-3 px-4 text-xs font-semibold text-foreground">
@@ -67,19 +120,19 @@ export function LoansTable({
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={9} className="py-8 px-4 text-center text-xs text-muted-foreground">
+                                    <td colSpan={11} className="py-8 px-4 text-center text-xs text-muted-foreground">
                                         Loading loan requests...
                                     </td>
                                 </tr>
                             ) : error ? (
                                 <tr>
-                                    <td colSpan={9} className="py-8 px-4 text-center text-xs text-destructive">
+                                    <td colSpan={11} className="py-8 px-4 text-center text-xs text-destructive">
                                         {error}
                                     </td>
                                 </tr>
                             ) : loanRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="py-8 px-4 text-center text-xs text-muted-foreground">
+                                    <td colSpan={11} className="py-8 px-4 text-center text-xs text-muted-foreground">
                                         No loan requests found
                                     </td>
                                 </tr>
@@ -108,6 +161,22 @@ export function LoansTable({
                                             {formatCurrency(request.max_loan)}
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground">
+                                            {request.current_capacity ? formatCurrency(parseFloat(request.current_capacity)) : "$0.00"}
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
+                                            {request.vault_address ? (
+                                                <CopyButton
+                                                    textToCopy={request.vault_address}
+                                                    displayText={truncateAddress(request.vault_address)}
+                                                    iconSize={12}
+                                                    textSize="xs"
+                                                    showText={true}
+                                                />
+                                            ) : (
+                                                <span className="text-muted-foreground">N/A</span>
+                                            )}
+                                        </td>
+                                        <td className="py-3 px-4 text-xs text-foreground">
                                             <span className={`px-2 py-1 rounded-full ${getStatusBadgeClass(request.status)}`}>
                                                 {formatStatus(request.status)}
                                             </span>
@@ -134,7 +203,7 @@ export function LoansTable({
                                                     variant="outline"
                                                     size="sm"
                                                     className="text-xs"
-                                                    onClick={() => onPay(request.id)}
+                                                    onClick={() => openPayModal(request)}
                                                 >
                                                     Pay
                                                 </Button>
@@ -147,6 +216,19 @@ export function LoansTable({
                     </table>
                 </div>
             </CardContent>
+
+            {/* Pay Modal */}
+            {selectedRequest && (
+                <PayModal
+                    isOpen={payModalOpen}
+                    onClose={closePayModal}
+                    onConfirm={handlePayConfirm}
+                    maxAmount={getMaxAmount(selectedRequest)}
+                    isProcessing={isProcessing}
+                    processingStep={processingStep}
+                    txHash={txHash}
+                />
+            )}
         </Card>
     );
 }
