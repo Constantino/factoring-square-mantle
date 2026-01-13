@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { LoanRequest, LoanRequestBody } from '../models/loanRequest';
-import { validateRequest, validateChangeLoanStatusRequest } from '../validators/loanRequestValidators';
+import { validateRequest, validateChangeLoanStatusRequest, validateLoanStatusQueryParam } from '../validators/loanRequestValidators';
 import { validateWalletAddress } from '../validators/walletAddressValidator';
 import { sanitizeLoanRequestRequest, sanitizeWalletAddress } from '../utils/sanitize';
 import { vaultService } from '../services/vaultService';
@@ -412,6 +412,61 @@ export const getLoanRequestByIdWithDetails = async (req: Request, res: Response)
 
         res.status(500).json({
             error: 'Failed to retrieve loan request details',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const getAllLoanRequests = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { status } = req.query;
+
+        // Validate status parameter
+        const validationResult = validateLoanStatusQueryParam(status);
+        if ('error' in validationResult) {
+            res.status(400).json({
+                error: validationResult.error
+            });
+            return;
+        }
+
+        const loanStatus = validationResult.status;
+
+        // Query database for all loan requests with the specified status
+        const query = `
+            SELECT 
+                id,
+                created_at,
+                modified_at,
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                term,
+                customer_name,
+                delivery_completed,
+                advance_rate,
+                monthly_interest_rate,
+                max_loan,
+                not_pledged,
+                assignment_signed,
+                borrower_address,
+                status
+            FROM "LoanRequests"
+            WHERE status = $1
+            ORDER BY created_at DESC
+        `;
+
+        const result = await pool.query<LoanRequest>(query, [loanStatus]);
+
+        res.status(200).json({
+            message: `Loan requests with ${loanStatus} status retrieved successfully`,
+            data: result.rows,
+            count: result.rows.length
+        });
+    } catch (error) {
+        console.error('Error retrieving loan requests:', error);
+        res.status(500).json({
+            error: 'Failed to retrieve loan requests',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

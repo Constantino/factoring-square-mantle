@@ -6,6 +6,7 @@ const router: Router = express.Router();
 // Loan request routes
 router.get('/borrower/:borrowerAddress/stats', loanRequestController.getLoanStatsByBorrowerAddress);
 router.get('/borrower/:borrowerAddress', loanRequestController.getLoanRequestByBorrowerAddress);
+router.get('/', loanRequestController.getAllLoanRequests);
 router.get('/:id/details', loanRequestController.getLoanRequestByIdWithDetails);
 router.get('/:id', loanRequestController.getLoanRequestById);
 router.post('/', loanRequestController.createLoanRequest);
