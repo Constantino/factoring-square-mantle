@@ -281,7 +281,7 @@ export default function AdminPage() {
                         whileHover={undefined}
                     >
                         <CardHeader className="p-4">
-                            <CardTitle className="text-base">Platform Performance</CardTitle>
+                            <CardTitle className="text-base">Performance</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                             <PlatformPerformanceAreaChart data={monthlyData} />
