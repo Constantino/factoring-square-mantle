@@ -106,8 +106,14 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
 
         const svgRect = svgRef.current.getBoundingClientRect();
         const containerRect = containerRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - svgRect.left;
-        const mouseY = e.clientY - svgRect.top;
+
+        // Get SVG viewBox scale factor if SVG is scaled
+        const svgScaleX = svgRect.width / width;
+        const svgScaleY = svgRect.height / height;
+
+        // Convert mouse position to SVG coordinates (accounting for viewBox scaling)
+        const mouseX = (e.clientX - svgRect.left) / svgScaleX;
+        const mouseY = (e.clientY - svgRect.top) / svgScaleY;
 
         // Check if mouse is within chart area
         if (mouseX < padding.left || mouseX > padding.left + chartWidth) {
@@ -116,12 +122,21 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
             return;
         }
 
-        // Find closest data point
+        // Find closest data point by calculating distance to each point's X position
         const relativeX = mouseX - padding.left;
-        const index = Math.round((relativeX / chartWidth) * (data.length - 1));
-        const clampedIndex = Math.max(0, Math.min(data.length - 1, index));
+        let closestIndex = 0;
+        let minDistance = Infinity;
 
-        setHoveredIndex(clampedIndex);
+        for (let i = 0; i < data.length; i++) {
+            const pointX = padding.left + scaleX(i);
+            const distance = Math.abs(mouseX - pointX);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+
+        setHoveredIndex(closestIndex);
         // Position tooltip relative to container
         setTooltipPosition({
             x: e.clientX - containerRect.left,
