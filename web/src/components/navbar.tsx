@@ -11,6 +11,7 @@ import {
     TooltipProvider,
 } from "@/components/ui/tooltip";
 import { CopyButton } from "@/components/copy-button";
+import { Button } from "@/components/ui/button";
 
 interface RouteConfig {
     path: string;
@@ -51,7 +52,7 @@ const Navbar = () => {
     // Handle role change
     const handleRoleChange = (newRole: UserRole) => {
         setRole(newRole);
-        
+
         // Check if current page is allowed for new role
         if (!isRouteAllowedForRole(pathname, newRole)) {
             // Redirect to first allowed route for this role
@@ -121,11 +122,23 @@ const Navbar = () => {
                                         <span className="font-mono">${usdcBalance} USDC</span>
                                     )}
                                 </div>
-                                
+
                                 {/* Username */}
                                 <div className="text-sm text-foreground font-medium">
                                     {getUserName()}
                                 </div>
+
+                                {/* Logout Button */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        // Dummy logout - to be implemented
+                                        console.log('Logout clicked');
+                                    }}
+                                >
+                                    Logout
+                                </Button>
                             </div>
 
                             {/* Row 2: Wallet Address with Copy */}
