@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
+import { PlatformPerformanceAreaChart } from "@/components/platform-performance-area-chart";
 import { LoanRequestWithVault, LoanStats } from "@/types/loans";
 import { formatCurrency } from "@/lib/format";
 
@@ -106,6 +107,35 @@ export default function AdminPage() {
     const totalCapital = 121750;
     const creditScore = 750;
 
+    // Generate dummy monthly data for the past 12 months
+    const generateMonthlyData = () => {
+        const months = [];
+        const baseDate = new Date(2024, 0, 1); // January 2024
+
+        for (let i = 0; i < 12; i++) {
+            const date = new Date(baseDate);
+            date.setMonth(baseDate.getMonth() + i);
+
+            // Generate realistic growth patterns with some variation
+            const monthMultiplier = 1 + (i * 0.08); // 8% growth per month
+            const variation = 0.9 + Math.random() * 0.2; // ±10% variation
+
+            months.push({
+                month: date.toISOString(),
+                collateralUnderManagement: Math.round(500000 * monthMultiplier * variation),
+                totalCapitalLoaned: Math.round(400000 * monthMultiplier * variation),
+                realizedYield: Math.round(25000 * monthMultiplier * variation),
+                unrealizedYield: Math.round(15000 * monthMultiplier * variation),
+                delinquentRecovery: Math.round(5000 * monthMultiplier * (0.8 + Math.random() * 0.4)),
+                managementFeeIncome: Math.round(12000 * monthMultiplier * variation),
+            });
+        }
+
+        return months;
+    };
+
+    const monthlyData = generateMonthlyData();
+
     return (
         <div className="w-full p-8">
             <div className="max-w-7xl mx-auto space-y-6">
@@ -188,7 +218,7 @@ export default function AdminPage() {
                             <CardTitle className="text-base">Platform Performance</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
-
+                            <PlatformPerformanceAreaChart data={monthlyData} />
                         </CardContent>
                     </Card>
                 </div>
