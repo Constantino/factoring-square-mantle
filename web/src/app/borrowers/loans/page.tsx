@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useWallets } from "@privy-io/react-auth";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
@@ -149,6 +149,11 @@ export default function LoanDashboardPage() {
                     >
                         <CardHeader className="p-4">
                             <CardTitle className="text-base">Stats</CardTitle>
+                            {loanStats && (
+                                <CardDescription className="text-xs text-muted-foreground">
+                                    Total loans: {(loanStats.active ?? 0) + (loanStats.paid ?? 0) + (loanStats.defaulted ?? 0) + (loanStats.listed ?? 0)}
+                                </CardDescription>
+                            )}
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                             {isLoadingStats ? (
