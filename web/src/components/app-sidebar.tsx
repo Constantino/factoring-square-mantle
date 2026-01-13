@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import {
     Sidebar,
     SidebarContent,
@@ -15,6 +15,7 @@ import {
 import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon, LayoutDashboard } from "lucide-react"
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
+import { useRequestedCountStore } from "@/stores/requestedCountStore"
 import { NotificationBadge } from "@/components/notification-badge"
 import { countRequestedLoanRequests } from "@/services/loanService"
 
@@ -28,7 +29,7 @@ interface MenuItem {
 export function AppSidebar() {
     const { currentRole } = useRoleStore()
     const { state } = useSidebar()
-    const [requestedCount, setRequestedCount] = useState<number>(0)
+    const { requestedCount, setRequestedCount } = useRequestedCountStore()
 
     useEffect(() => {
         const fetchRequestedCount = async () => {
@@ -45,7 +46,7 @@ export function AppSidebar() {
         if (currentRole === 'Admin') {
             fetchRequestedCount()
         }
-    }, [currentRole])
+    }, [currentRole, setRequestedCount])
 
     const allMenuItems: MenuItem[] = [
         {
