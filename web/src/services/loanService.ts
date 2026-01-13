@@ -201,6 +201,28 @@ export function calculateTotalInterest(loanRequests: LoanRequestWithVault[]): nu
 }
 
 /**
+ * Calculate total capital (sum of max_loan) from all active loans
+ * @param loanRequests - Array of loan requests with vault information
+ * @returns The total capital amount (sum of max_loan) from all active loans
+ */
+export function calculateTotalCapital(loanRequests: LoanRequestWithVault[]): number {
+    const activeLoans = loanRequests.filter(loan => loan.status === 'ACTIVE');
+    const totalCapital = activeLoans.reduce((sum, loan) => {
+        // Handle both number and string types for max_loan
+        let maxLoan = 0;
+        if (typeof loan.max_loan === 'number') {
+            maxLoan = !isNaN(loan.max_loan) && isFinite(loan.max_loan) ? loan.max_loan : 0;
+        } else if (typeof loan.max_loan === 'string') {
+            const parsed = parseFloat(loan.max_loan);
+            maxLoan = !isNaN(parsed) && isFinite(parsed) ? parsed : 0;
+        }
+        return sum + maxLoan;
+    }, 0);
+    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
+    return Math.round(totalCapital * 1e6) / 1e6;
+}
+
+/**
  * Calculate total debt (full loan amount + interest)
  * @param request - The loan request with vault information
  * @returns The total debt amount (principal + interest)
