@@ -10,6 +10,7 @@ router.get('/', loanRequestController.getAllLoanRequests);
 router.get('/:id/details', loanRequestController.getLoanRequestByIdWithDetails);
 router.get('/:id', loanRequestController.getLoanRequestById);
 router.post('/', loanRequestController.createLoanRequest);
+router.post('/:id/approve', loanRequestController.approveLoanRequest);
 router.patch('/:id/status', loanRequestController.changeLoanStatus);
 
 export default router;
