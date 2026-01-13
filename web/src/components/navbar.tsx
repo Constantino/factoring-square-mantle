@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 interface RouteConfig {
     path: string;
@@ -137,6 +138,7 @@ const Navbar = () => {
                                         console.log('Logout clicked');
                                     }}
                                 >
+                                    <LogOut className="size-4" />
                                     Logout
                                 </Button>
                             </div>
