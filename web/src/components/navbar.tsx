@@ -212,7 +212,7 @@ const Navbar = () => {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent
-                                            className="w-56"
+                                            className="w-35"
                                             align="end"
                                             onInteractOutside={() => {
                                                 // Blur the trigger button when clicking outside
