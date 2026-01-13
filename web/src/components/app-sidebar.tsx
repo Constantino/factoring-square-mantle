@@ -14,6 +14,7 @@ import {
 import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon, LayoutDashboard } from "lucide-react"
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
+import { NotificationBadge } from "@/components/notification-badge"
 
 interface MenuItem {
     title: string;
@@ -82,10 +83,13 @@ export function AppSidebar() {
                         <SidebarMenu>
                             {menuItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild>
+                                    <SidebarMenuButton asChild className="relative">
                                         <Link href={item.url}>
                                             <item.icon />
                                             <span>{item.title}</span>
+                                            {item.title === "Admin panel" && (
+                                                <NotificationBadge count={1} />
+                                            )}
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
