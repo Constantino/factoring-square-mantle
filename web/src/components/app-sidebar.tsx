@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
     Sidebar,
     SidebarContent,
@@ -15,6 +16,7 @@ import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
 import { NotificationBadge } from "@/components/notification-badge"
+import { countRequestedLoanRequests } from "@/services/loanService"
 
 interface MenuItem {
     title: string;
@@ -26,6 +28,24 @@ interface MenuItem {
 export function AppSidebar() {
     const { currentRole } = useRoleStore()
     const { state } = useSidebar()
+    const [requestedCount, setRequestedCount] = useState<number>(0)
+
+    useEffect(() => {
+        const fetchRequestedCount = async () => {
+            try {
+                const count = await countRequestedLoanRequests()
+                setRequestedCount(count)
+            } catch (error) {
+                console.error("Error fetching requested loan count:", error)
+                // Keep count at 0 on error
+            }
+        }
+
+        // Only fetch if user is Admin (since only Admin sees the badge)
+        if (currentRole === 'Admin') {
+            fetchRequestedCount()
+        }
+    }, [currentRole])
 
     const allMenuItems: MenuItem[] = [
         {
@@ -88,7 +108,7 @@ export function AppSidebar() {
                                             <item.icon />
                                             <span>{item.title}</span>
                                             {item.title === "Admin panel" && (
-                                                <NotificationBadge count={1} />
+                                                <NotificationBadge count={requestedCount} />
                                             )}
                                         </Link>
                                     </SidebarMenuButton>
