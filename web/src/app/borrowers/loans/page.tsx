@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
-import { LoanRequestWithVault } from "@/types/loans";
-import { getLoanRequestsByBorrowerWithVaults, repayLoan } from "@/services/loanService";
+import { LoanRequestWithVault, LoanStats } from "@/types/loans";
+import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
@@ -19,13 +19,17 @@ export default function LoanDashboardPage() {
     const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [loanStats, setLoanStats] = useState<LoanStats | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
     const creditScore = 725; // Example score - can be made dynamic later
 
     useEffect(() => {
         if (walletAddress) {
             fetchLoanRequests();
+            fetchBorrowerStats();
         } else {
             setLoanRequests([]);
+            setLoanStats(null);
         }
     }, [walletAddress]);
 
@@ -52,6 +56,21 @@ export default function LoanDashboardPage() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchBorrowerStats = async () => {
+        if (!walletAddress) return;
+
+        try {
+            setIsLoadingStats(true);
+            const stats = await getBorrowerStats(walletAddress);
+            setLoanStats(stats);
+        } catch (err) {
+            console.error("Error fetching borrower stats:", err);
+            // Don't set error state for stats - just log it
+        } finally {
+            setIsLoadingStats(false);
         }
     };
 
@@ -104,8 +123,9 @@ export default function LoanDashboardPage() {
                 onProgress
             );
 
-            // Refresh loan requests after successful repayment
+            // Refresh loan requests and stats after successful repayment
             await fetchLoanRequests();
+            await fetchBorrowerStats();
 
             return txHash;
         } catch (error) {
@@ -130,7 +150,46 @@ export default function LoanDashboardPage() {
                             <CardTitle className="text-base">Stats</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
-
+                            {isLoadingStats ? (
+                                <div className="text-xs text-muted-foreground">Loading...</div>
+                            ) : loanStats ? (
+                                <div className="space-y-3">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-foreground">
+                                            Active Loans
+                                        </label>
+                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
+                                            {loanStats.active}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-foreground">
+                                            Paid Loans
+                                        </label>
+                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
+                                            {loanStats.paid}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-foreground">
+                                            Defaulted Loans
+                                        </label>
+                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
+                                            {loanStats.defaulted}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-foreground">
+                                            Listed Loans
+                                        </label>
+                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
+                                            {loanStats.listed}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-muted-foreground">No stats available</div>
+                            )}
                         </CardContent>
                     </Card>
 
