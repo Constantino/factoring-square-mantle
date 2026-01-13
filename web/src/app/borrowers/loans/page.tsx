@@ -130,37 +130,7 @@ export default function LoanDashboardPage() {
                             <CardTitle className="text-base">Stats</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
-                            <div className="space-y-2">
-                                <label className="text-xs font-medium text-foreground">
-                                    Borrower Address
-                                </label>
-                                {walletAddress ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 px-3 py-1.5 bg-muted rounded-md text-xs text-foreground font-mono break-all">
-                                            {walletAddress}
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={handleCopy}
-                                            className="shrink-0"
-                                        >
-                                            {copied ? (
-                                                <Check className="h-4 w-4" />
-                                            ) : (
-                                                <Copy className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-muted-foreground italic">
-                                        {walletsReady && privyReady
-                                            ? "No wallet found. Please connect a wallet."
-                                            : "Loading wallet information..."}
-                                    </div>
-                                )}
-                            </div>
+
                         </CardContent>
                     </Card>
 
