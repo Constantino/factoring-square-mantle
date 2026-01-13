@@ -220,6 +220,22 @@ const Navbar = () => {
                                             onEscapeKeyDown={blurTrigger}
                                         >
                                             <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                                            {walletAddress && (
+                                                <>
+                                                    <DropdownMenuSeparator />
+                                                    <div className="px-2 py-1.5">
+                                                        <TooltipProvider>
+                                                            <CopyButton
+                                                                textToCopy={walletAddress}
+                                                                displayText={walletAddress}
+                                                                iconSize={12}
+                                                                textSize="xs"
+                                                                showText={true}
+                                                            />
+                                                        </TooltipProvider>
+                                                    </div>
+                                                </>
+                                            )}
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                                 onClick={() => {
@@ -234,21 +250,6 @@ const Navbar = () => {
                                     </DropdownMenu>
                                 </div>
                             </div>
-
-                            {/* Row 2: Wallet Address with Copy */}
-                            {walletAddress && (
-                                <TooltipProvider>
-                                    <div className="flex items-center gap-2">
-                                        <CopyButton
-                                            textToCopy={walletAddress}
-                                            displayText={walletAddress}
-                                            iconSize={12}
-                                            textSize="xs"
-                                            showText={true}
-                                        />
-                                    </div>
-                                </TooltipProvider>
-                            )}
                         </div>
                     )}
                 </div>
