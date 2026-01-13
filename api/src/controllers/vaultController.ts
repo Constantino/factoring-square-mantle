@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { CreateVaultBody } from "../models/vault";
+import { CreateVaultBody, TrackRepaymentBody } from "../models/vault";
 import { CreateVaultLenderBody } from "../models/vaultLender";
-import { validateRequest, validateDepositTracking, validateVaultAddressParam, validateLenderAddressParam, validateRepaymentTracking, TrackRepaymentBody } from "../validators/vaultValidator";
+import { validateRequest, validateDepositTracking, validateVaultAddressParam, validateLenderAddressParam, validateRepaymentTracking } from "../validators/vaultValidator";
 import { vaultService } from "../services/vaultService";
 import { VaultStatus } from "../types/vaultStatus";
 
