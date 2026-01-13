@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { LoanRequest, LoanRequestBody } from '../models/loanRequest';
-import { validateRequest, validateChangeLoanStatusRequest, validateLoanStatusQueryParam } from '../validators/loanRequestValidators';
+import { validateRequest, validateChangeLoanStatusRequest, validateLoanStatusQueryParam, validateLoanId } from '../validators/loanRequestValidators';
 import { validateWalletAddress } from '../validators/walletAddressValidator';
 import { sanitizeLoanRequestRequest, sanitizeWalletAddress } from '../utils/sanitize';
 import { vaultService } from '../services/vaultService';
@@ -412,6 +412,88 @@ export const getLoanRequestByIdWithDetails = async (req: Request, res: Response)
 
         res.status(500).json({
             error: 'Failed to retrieve loan request details',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const approveLoanRequest = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        // Validate input
+        const validationError = validateLoanId(id);
+        if (validationError) {
+            res.status(400).json({
+                error: validationError
+            });
+            return;
+        }
+
+        const loanRequestId = parseInt(id as string, 10);
+
+        // Get loan request details
+        const query = `
+            SELECT 
+                id,
+                invoice_number,
+                invoice_amount,
+                invoice_due_date,
+                customer_name,
+                borrower_address,
+                max_loan,
+                status
+            FROM "LoanRequests"
+            WHERE id = $1
+        `;
+
+        const result = await pool.query<LoanRequest>(query, [loanRequestId]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({
+                error: 'Loan request not found'
+            });
+            return;
+        }
+
+        const loanRequest = result.rows[0];
+
+        // Check if loan request is in REQUESTED status
+        if (loanRequest.status !== LoanStatus.REQUESTED) {
+            res.status(400).json({
+                error: `Cannot approve loan request. Current status is ${loanRequest.status}. Only REQUESTED loans can be approved.`
+            });
+            return;
+        }
+
+        // Change loan status to LISTED
+        await loanService.changeLoanStatus(loanRequestId, LoanStatus.LISTED);
+
+        // Convert invoice_due_date to Unix timestamp (seconds)
+        const maturityDate = Math.floor(new Date(loanRequest.invoice_due_date).getTime() / 1000);
+
+        // Create vault for the loan request
+        const vaultResult = await vaultService.createVault({
+            invoiceName: loanRequest.customer_name,
+            invoiceNumber: loanRequest.invoice_number,
+            borrowerAddress: loanRequest.borrower_address,
+            invoiceAmount: loanRequest.max_loan,
+            maturityDate: maturityDate,
+            loanRequestId: loanRequest.id
+        });
+
+        res.status(200).json({
+            message: 'Loan request approved and vault created successfully',
+            data: {
+                loanRequestId: loanRequest.id,
+                status: LoanStatus.LISTED,
+                vault: vaultResult
+            }
+        });
+    } catch (error) {
+        console.error('Error approving loan request:', error);
+        res.status(500).json({
+            error: 'Failed to approve loan request',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
