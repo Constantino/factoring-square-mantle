@@ -28,6 +28,20 @@ export async function getAllLoanRequestsByStatus(status: LoanRequestStatus | str
 }
 
 /**
+ * Counts how many loan requests are in REQUESTED status
+ * @returns Promise resolving to the count of loan requests with REQUESTED status
+ * @throws Error if the request fails
+ */
+export async function countRequestedLoanRequests(): Promise<number> {
+    const apiUrl = getApiUrl();
+    const response = await axios.get<{ data: LoanRequest[]; count: number }>(
+        `${apiUrl}/loan-requests?status=${LoanRequestStatus.REQUESTED}`
+    );
+
+    return response.data.count || 0;
+}
+
+/**
  * Fetches loan requests for a specific borrower address
  * @param borrowerAddress - The wallet address of the borrower
  * @returns Promise resolving to an array of loan requests
