@@ -214,11 +214,14 @@ export class VaultService {
 
     // Step 4: Calculate new status based on capacity
     private calculateNewStatus(currentStatus: VaultStatus, currentCapacity: number, newCapacity: number, maxCapacity: number): VaultStatus {
+        // Use epsilon for floating point comparison
+        const EPSILON = 0.000001; // 1e-6
+        
         // Update status based on capacity
         if (currentStatus === VaultStatus.PENDING && newCapacity > 0) {
             return VaultStatus.FUNDING;
         }
-        if (newCapacity >= maxCapacity) {
+        if ((newCapacity + EPSILON) >= maxCapacity) {
             return VaultStatus.FUNDED;
         }
         return currentStatus;
@@ -307,7 +310,10 @@ export class VaultService {
             const currentCapacity = parseFloat(vault.current_capacity);
             const maxCapacity = parseFloat(vault.max_capacity);
             const newCapacity = currentCapacity + depositData.amount;
-            const isFullyFunded = newCapacity >= maxCapacity;
+            
+            // Use epsilon for floating point comparison (handles 0.8 == 0.8 precision issues)
+            const EPSILON = 0.000001; // 1e-6
+            const isFullyFunded = (newCapacity + EPSILON) >= maxCapacity;
 
             // Step 4: Insert lender record
             const lender = await this.insertLenderRecord(client, vault.vault_id, depositData);
@@ -340,8 +346,12 @@ export class VaultService {
                     
                     console.log(`Smart contract state: totalAssets=${totalAssetsUsdc} USDC, maxCapacity=${maxCapacity} USDC`);
                     
+                    // Use epsilon for floating point comparison (handles precision issues)
+                    const EPSILON = 0.000001; // 1e-6
+                    const isContractFullyFunded = (totalAssetsUsdc + EPSILON) >= maxCapacity;
+                    
                     // Only release if smart contract confirms it's fully funded
-                    if (totalAssetsUsdc >= maxCapacity) {
+                    if (isContractFullyFunded) {
                         releaseTxHash = await this.releaseFundsToContract(vaultAddress);
                         await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
 
