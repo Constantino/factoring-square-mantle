@@ -103,6 +103,32 @@ export async function getLoanRequestDetail(
 }
 
 /**
+ * Changes the status of a loan request
+ * @param loanRequestId - The ID of the loan request
+ * @param status - The new status to set
+ * @returns Promise resolving when the status is changed
+ * @throws Error if the request fails
+ */
+export async function changeLoanRequestStatus(
+    loanRequestId: number,
+    status: LoanRequestStatus | string
+): Promise<void> {
+    if (!loanRequestId || loanRequestId <= 0) {
+        throw new Error("Valid loan request ID is required");
+    }
+
+    if (!status) {
+        throw new Error("Status is required");
+    }
+
+    const apiUrl = getApiUrl();
+    await axios.patch(
+        `${apiUrl}/loan-requests/${loanRequestId}/status`,
+        { status }
+    );
+}
+
+/**
  * Fetches loan statistics for a specific borrower address
  * @param borrowerAddress - The wallet address of the borrower
  * @returns Promise resolving to loan statistics (active, paid, defaulted, listed counts)
