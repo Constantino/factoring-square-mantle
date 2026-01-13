@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { useRef, useEffect, useState } from "react";
 import { useUserStore } from "@/stores/userStore";
 import { useRoleStore, UserRole } from "@/stores/roleStore";
+import { usePrivy } from "@privy-io/react-auth";
 import { useUSDCBalance } from "@/hooks/use-usdc-balance";
 import { useMNTBalance } from "@/hooks/use-mnt-balance";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
@@ -11,6 +13,17 @@ import {
     TooltipProvider,
 } from "@/components/ui/tooltip";
 import { CopyButton } from "@/components/copy-button";
+import { Button } from "@/components/ui/button";
+import { LogOut, ChevronDown } from "lucide-react";
+import { truncateAddress } from "@/lib/format";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface RouteConfig {
     path: string;
@@ -18,13 +31,16 @@ interface RouteConfig {
 }
 
 const Navbar = () => {
-    const { isLoggedIn, user } = useUserStore();
+    const { isLoggedIn, user, logout } = useUserStore();
     const { currentRole, setRole } = useRoleStore();
     const { balance: usdcBalance, isLoading: isLoadingUsdc } = useUSDCBalance();
     const { balance: mntBalance, isLoading: isLoadingMnt } = useMNTBalance();
     const { walletAddress } = useWalletAddress();
+    const { logout: privyLogout } = usePrivy();
     const router = useRouter();
     const pathname = usePathname();
+    const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     // Define routes with their allowed roles
     const routes: RouteConfig[] = [
@@ -51,7 +67,7 @@ const Navbar = () => {
     // Handle role change
     const handleRoleChange = (newRole: UserRole) => {
         setRole(newRole);
-        
+
         // Check if current page is allowed for new role
         if (!isRouteAllowedForRole(pathname, newRole)) {
             // Redirect to first allowed route for this role
@@ -66,7 +82,56 @@ const Navbar = () => {
         return user.email.split('@')[0];
     };
 
+    // Blur the dropdown trigger button
+    const blurTrigger = () => {
+        const triggerButton = dropdownTriggerRef.current ||
+            (document.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLButtonElement);
+        if (triggerButton) {
+            triggerButton.blur();
+            triggerButton.classList.remove('focus-visible');
+            // Force remove focus by focusing body
+            if (document.activeElement === triggerButton) {
+                (document.body as HTMLElement).focus();
+                document.body.blur();
+            }
+        }
+    };
+
+    // Handle logout
+    const handleLogout = () => {
+        logout();
+        privyLogout();
+        router.push('/');
+    };
+
     const roles: UserRole[] = ['Admin', 'Lender', 'Borrower'];
+
+    // Blur button when dropdown closes and handle global clicks
+    useEffect(() => {
+        const handleDocumentClick = (e: MouseEvent) => {
+            // If dropdown is closed and we click anywhere, blur the trigger
+            if (!isDropdownOpen) {
+                const triggerButton = document.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLButtonElement;
+                if (triggerButton && document.activeElement === triggerButton) {
+                    blurTrigger();
+                }
+            }
+        };
+
+        if (!isDropdownOpen) {
+            // Blur immediately when closing
+            blurTrigger();
+
+            // Add global click listener
+            document.addEventListener('mousedown', handleDocumentClick, true);
+            document.addEventListener('click', handleDocumentClick, true);
+
+            return () => {
+                document.removeEventListener('mousedown', handleDocumentClick, true);
+                document.removeEventListener('click', handleDocumentClick, true);
+            };
+        }
+    }, [isDropdownOpen]);
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
@@ -121,27 +186,77 @@ const Navbar = () => {
                                         <span className="font-mono">${usdcBalance} USDC</span>
                                     )}
                                 </div>
-                                
-                                {/* Username */}
-                                <div className="text-sm text-foreground font-medium">
-                                    {getUserName()}
+
+                                {/* Username Dropdown */}
+                                <div className="inline-block">
+                                    <DropdownMenu
+                                        onOpenChange={(open) => {
+                                            setIsDropdownOpen(open);
+                                            if (!open) {
+                                                blurTrigger();
+                                            }
+                                        }}
+                                        modal={false}
+                                    >
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                ref={dropdownTriggerRef}
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-sm text-foreground font-medium"
+                                                style={!isDropdownOpen ? {
+                                                    outline: 'none',
+                                                    boxShadow: 'none',
+                                                    borderColor: 'transparent'
+                                                } : undefined}
+                                                onMouseDown={(e) => {
+                                                    // Prevent focus on mouse down when dropdown is closed
+                                                    if (!isDropdownOpen && document.activeElement === e.currentTarget) {
+                                                        blurTrigger();
+                                                    }
+                                                }}
+                                            >
+                                                {getUserName()}
+                                                <ChevronDown className="ml-2 size-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                            className="w-35"
+                                            align="end"
+                                            onInteractOutside={() => {
+                                                // Blur the trigger button when clicking outside
+                                                setTimeout(blurTrigger, 0);
+                                            }}
+                                            onEscapeKeyDown={blurTrigger}
+                                        >
+                                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                                            {walletAddress && (
+                                                <>
+                                                    <DropdownMenuSeparator />
+                                                    <div className="px-2 py-1.5">
+                                                        <TooltipProvider>
+                                                            <CopyButton
+                                                                textToCopy={walletAddress}
+                                                                displayText={truncateAddress(walletAddress)}
+                                                                iconSize={12}
+                                                                textSize="xs"
+                                                                showText={true}
+                                                            />
+                                                        </TooltipProvider>
+                                                    </div>
+                                                </>
+                                            )}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={handleLogout}
+                                            >
+                                                <LogOut className="mr-2 size-4" />
+                                                Log out
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </div>
-
-                            {/* Row 2: Wallet Address with Copy */}
-                            {walletAddress && (
-                                <TooltipProvider>
-                                    <div className="flex items-center gap-2">
-                                        <CopyButton
-                                            textToCopy={walletAddress}
-                                            displayText={walletAddress}
-                                            iconSize={12}
-                                            textSize="xs"
-                                            showText={true}
-                                        />
-                                    </div>
-                                </TooltipProvider>
-                            )}
                         </div>
                     )}
                 </div>
