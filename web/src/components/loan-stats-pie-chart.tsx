@@ -20,7 +20,7 @@ export function LoanStatsPieChart({ stats }: LoanStatsPieChartProps) {
     if (total === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-4">
-                <div className="w-32 h-32 rounded-full border-2 border-muted flex items-center justify-center">
+                <div className="w-48 h-48 rounded-full border-2 border-muted flex items-center justify-center">
                     <span className="text-xs text-muted-foreground">No data</span>
                 </div>
             </div>
@@ -36,8 +36,8 @@ export function LoanStatsPieChart({ stats }: LoanStatsPieChartProps) {
     const listedAngle = calculateAngle(listed);
 
     // SVG dimensions
-    const size = 120;
-    const radius = 50;
+    const size = 180;
+    const radius = 75;
     const centerX = size / 2;
     const centerY = size / 2;
 
