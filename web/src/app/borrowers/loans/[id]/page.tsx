@@ -154,7 +154,7 @@ export default function LoanRequestDetailPage() {
                 <div className="flex items-center justify-between mb-6">
                     <Button variant="ghost" size="sm" onClick={() => router.back()}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Loans
+                        Back
                     </Button>
                     <h1 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Loan Request Details</h1>
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(loanDetail.status)}`}>
