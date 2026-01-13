@@ -268,34 +268,39 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             borrower_address,
         });
 
-        // Create vault for the loan request
-        try {
-            // Convert invoice_due_date to Unix timestamp (seconds)
-            const maturityDate = Math.floor(new Date(loanRequest.invoice_due_date).getTime() / 1000);
+        res.status(201).json({
+            message: 'Loan request created successfully',
+            data: loanRequest
+        });
 
-            const vaultResult = await vaultService.createVault({
-                invoiceName: loanRequest.customer_name,
-                invoiceNumber: loanRequest.invoice_number,
-                borrowerAddress: loanRequest.borrower_address,
-                invoiceAmount: loanRequest.max_loan,
-                maturityDate: maturityDate,
-                loanRequestId: loanRequest.id
-            });
+        // // Create vault for the loan request
+        // try {
+        //     // Convert invoice_due_date to Unix timestamp (seconds)
+        //     const maturityDate = Math.floor(new Date(loanRequest.invoice_due_date).getTime() / 1000);
 
-            res.status(201).json({
-                message: 'Loan request created successfully',
-                data: loanRequest,
-                vault: vaultResult
-            });
-        } catch (vaultError) {
-            console.error('Error creating vault for loan request:', vaultError);
-            // Still return success for loan request, but include vault error
-            res.status(201).json({
-                message: 'Loan request created successfully, but vault creation failed',
-                data: loanRequest,
-                vaultError: vaultError instanceof Error ? vaultError.message : 'Unknown error'
-            });
-        }
+        //     const vaultResult = await vaultService.createVault({
+        //         invoiceName: loanRequest.customer_name,
+        //         invoiceNumber: loanRequest.invoice_number,
+        //         borrowerAddress: loanRequest.borrower_address,
+        //         invoiceAmount: loanRequest.max_loan,
+        //         maturityDate: maturityDate,
+        //         loanRequestId: loanRequest.id
+        //     });
+
+        //     res.status(201).json({
+        //         message: 'Loan request created successfully',
+        //         data: loanRequest,
+        //         vault: vaultResult
+        //     });
+        // } catch (vaultError) {
+        //     console.error('Error creating vault for loan request:', vaultError);
+        //     // Still return success for loan request, but include vault error
+        //     res.status(201).json({
+        //         message: 'Loan request created successfully, but vault creation failed',
+        //         data: loanRequest,
+        //         vaultError: vaultError instanceof Error ? vaultError.message : 'Unknown error'
+        //     });
+        // }
     } catch (error) {
         console.error('Error creating loan request:', error);
         res.status(500).json({
