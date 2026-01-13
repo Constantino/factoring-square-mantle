@@ -120,33 +120,71 @@ export default function AdminPage() {
         const realizedYieldRate = 0.015; // 1.5% monthly yield (realized)
         const unrealizedYieldRate = 0.014; // 1.4% monthly yield (unrealized)
         const delinquentRate = 0.012; // 1.2% of capital (low delinquency = healthy)
-        const managementFeeRate = 0.01; // 1.0% management fee
+
+        // Deterministic monthly variation patterns (simulating real business cycles)
+        // Values represent multipliers for each month (0-11) to create ups and downs
+        const monthlyVariations = [
+            0.95,  // Jan: Post-holiday slowdown
+            1.02,  // Feb: Recovery
+            1.05,  // Mar: Q1 end, strong
+            1.03,  // Apr: Slight dip
+            1.08,  // May: Strong growth
+            1.06,  // Jun: Q2 end, good
+            0.98,  // Jul: Summer slowdown
+            1.01,  // Aug: Recovery
+            1.07,  // Sep: Q3 end, strong
+            1.09,  // Oct: Very strong
+            1.12,  // Nov: Q4 peak
+            1.10,  // Dec: Strong end of year
+        ];
+
+        // Delinquent recovery has different pattern (spikes in certain months)
+        const delinquentVariations = [
+            1.1,   // Jan: Higher after holidays
+            0.9,   // Feb: Lower
+            0.85,  // Mar: Low
+            0.95,  // Apr: Normal
+            0.9,   // May: Low
+            1.0,   // Jun: Normal
+            1.15,  // Jul: Summer spike
+            1.2,   // Aug: Higher
+            0.95,  // Sep: Lower
+            0.9,   // Oct: Low
+            0.85,  // Nov: Very low
+            1.05,  // Dec: Slight increase
+        ];
 
         for (let i = 0; i < 12; i++) {
             const date = new Date(baseDate);
             date.setMonth(baseDate.getMonth() + i);
 
-            // Steady growth with small monthly variations (±3%)
-            const growthFactor = Math.pow(1 + monthlyGrowthRate, i);
-            const variation = 0.97 + Math.random() * 0.06; // ±3% variation
+            // Base growth factor (compounding monthly growth)
+            const baseGrowthFactor = Math.pow(1 + monthlyGrowthRate, i);
 
-            // Calculate collateral (growing steadily)
-            const collateral = Math.round(startingCollateral * growthFactor * variation);
+            // Apply monthly variation to create realistic ups and downs
+            const monthlyVariation = monthlyVariations[i];
+            const growthFactor = baseGrowthFactor * monthlyVariation;
 
-            // Capital loaned is typically 70-85% of collateral (using 78% average)
-            const capitalLoaned = Math.round(collateral * advanceRate * (0.98 + Math.random() * 0.04));
+            // Calculate collateral (growing with realistic variations)
+            const collateral = Math.round(startingCollateral * growthFactor);
 
-            // Realized yield is interest/fees already collected (1.5-2% of capital)
-            const realizedYield = Math.round(capitalLoaned * realizedYieldRate * (0.95 + Math.random() * 0.1));
+            // Capital loaned varies slightly (78-82% of collateral)
+            const capitalLoanedVariation = 0.78 + (i % 3) * 0.01; // Slight variation pattern
+            const capitalLoaned = Math.round(collateral * capitalLoanedVariation);
 
-            // Unrealized yield is pending interest (slightly lower than realized)
-            const unrealizedYield = Math.round(capitalLoaned * unrealizedYieldRate * (0.95 + Math.random() * 0.1));
+            // Realized yield varies by month (1.3% - 1.7% of capital)
+            const yieldVariation = 0.87 + (monthlyVariation - 0.95) * 0.5; // Tied to monthly performance
+            const realizedYield = Math.round(capitalLoaned * realizedYieldRate * yieldVariation);
 
-            // Delinquent recovery is small for healthy companies (0.8-1.5% of capital)
-            const delinquentRecovery = Math.round(capitalLoaned * delinquentRate * (0.7 + Math.random() * 0.6));
+            // Unrealized yield follows similar pattern but slightly lower
+            const unrealizedYield = Math.round(capitalLoaned * unrealizedYieldRate * yieldVariation * 0.93);
 
-            // Management fees (0.6-0.8% of capital)
-            const managementFeeIncome = Math.round(capitalLoaned * managementFeeRate * (0.9 + Math.random() * 0.2));
+            // Delinquent recovery has its own pattern (spikes in certain months)
+            const delinquentVariation = delinquentVariations[i];
+            const delinquentRecovery = Math.round(capitalLoaned * delinquentRate * delinquentVariation);
+
+            // Management fees are 10% of realized yield
+            const managementFeeIncome = Math.round(realizedYield * 0.10);
 
             months.push({
                 month: date.toISOString(),

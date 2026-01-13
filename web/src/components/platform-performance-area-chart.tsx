@@ -25,7 +25,7 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
     const colors = {
         realizedYield: "#22c55e", // green
         unrealizedYield: "#6b7280", // gray
-        delinquentRecovery: "#ef4444", // red
+        delinquentRecovery: "#eab308", // yellow
         managementFeeIncome: "#3b82f6", // blue
     };
 
