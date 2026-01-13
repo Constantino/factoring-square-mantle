@@ -341,3 +341,35 @@ export const changeLoanStatus = async (req: Request, res: Response): Promise<voi
     }
 };
 
+export const getLoanStatsByBorrowerAddress = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { borrowerAddress } = req.params;
+
+        // Sanitize input
+        const sanitizedAddress = sanitizeWalletAddress(borrowerAddress);
+
+        // Validate input
+        const validationError = validateWalletAddress(sanitizedAddress);
+        if (validationError) {
+            res.status(400).json({
+                error: validationError
+            });
+            return;
+        }
+
+        // Get loan stats
+        const stats = await loanService.getLoanStatsByBorrower(sanitizedAddress);
+
+        res.status(200).json({
+            message: 'Loan stats retrieved successfully',
+            data: stats
+        });
+    } catch (error) {
+        console.error('Error retrieving loan stats by borrower address:', error);
+        res.status(500).json({
+            error: 'Failed to retrieve loan stats',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
