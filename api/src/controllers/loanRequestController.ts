@@ -97,7 +97,7 @@ const getLoanRequestsByBorrowerAddressQuery = async (
                 v.modified_at as vault_modified_at,
                 v.fund_release_at as vault_fund_release_at
             FROM "LoanRequests" lr
-            INNER JOIN "Vaults" v ON v.loan_request_id = lr.id
+            LEFT JOIN "Vaults" v ON v.loan_request_id = lr.id
             WHERE lr.borrower_address = $1
             ORDER BY lr.created_at DESC
         `
