@@ -12,7 +12,8 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
 import { LoanRequestWithVault, LoanStats } from "@/types/loans";
-import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats } from "@/services/loanService";
+import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats, calculateTotalDebt } from "@/services/loanService";
+import { formatCurrency } from "@/lib/format";
 
 export default function LoanDashboardPage() {
     const router = useRouter();
@@ -136,6 +137,9 @@ export default function LoanDashboardPage() {
         }
     };
 
+    // Calculate total debt from all active loans
+    const totalDebt = calculateTotalDebt(loanRequests);
+
     return (
         <div className="w-full p-8">
             <div className="max-w-7xl mx-auto space-y-6">
@@ -181,7 +185,7 @@ export default function LoanDashboardPage() {
                                         Debt
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                        $0.00
+                                        {formatCurrency(totalDebt)}
                                     </div>
                                 </div>
                             </div>

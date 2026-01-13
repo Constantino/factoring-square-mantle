@@ -172,6 +172,20 @@ export function calculateInterest(request: LoanRequestWithVault): number {
 }
 
 /**
+ * Calculate total debt from all active loans
+ * @param loanRequests - Array of loan requests with vault information
+ * @returns The total debt amount (principal + interest) from all active loans
+ */
+export function calculateTotalDebt(loanRequests: LoanRequestWithVault[]): number {
+    const activeLoans = loanRequests.filter(loan => loan.status === 'ACTIVE');
+    const totalDebt = activeLoans.reduce((sum, loan) => {
+        const debt = getTotalDebt(loan);
+        return sum + debt;
+    }, 0);
+    return totalDebt;
+}
+
+/**
  * Calculate total debt (full loan amount + interest)
  * @param request - The loan request with vault information
  * @returns The total debt amount (principal + interest)
