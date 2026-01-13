@@ -3,7 +3,6 @@
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
     SidebarMenu,
@@ -12,13 +11,9 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet } from "lucide-react"
+import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useUserStore } from "@/stores/userStore"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
-import { usePrivy } from "@privy-io/react-auth"
-import { Separator } from "@/components/ui/separator"
 
 interface MenuItem {
     title: string;
@@ -28,17 +23,8 @@ interface MenuItem {
 }
 
 export function AppSidebar() {
-    const logout = useUserStore((state) => state.logout)
     const { currentRole } = useRoleStore()
-    const { logout: privyLogout } = usePrivy()
-    const router = useRouter()
     const { state } = useSidebar()
-
-    const handleLogout = () => {
-        logout()
-        privyLogout()
-        router.push('/')
-    }
 
     const allMenuItems: MenuItem[] = [
         {
@@ -102,18 +88,6 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
-
-            <SidebarFooter>
-                <Separator />
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton onClick={handleLogout} className="text-red-500 hover:text-red-600">
-                            <LogOut />
-                            <span>Logout</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarFooter>
 
             {/* Collapse trigger button */}
             <div className="absolute top-1/2 -translate-y-1/2 -right-3 z-50">
