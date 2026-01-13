@@ -2,10 +2,30 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { getApiUrl } from "@/lib/api";
 import { LoanRequest, LoanRequestWithVault, LoanStats, LoanRequestDetail } from "@/types/loans";
+import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
 import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import { PrivyWallet } from "@/types/providers";
 import { NetworkSwitchError } from "@/types/errors";
+
+/**
+ * Fetches all loan requests filtered by status
+ * @param status - The status to filter by (e.g., 'REQUESTED', 'LISTED', 'ACTIVE')
+ * @returns Promise resolving to an array of loan requests with the specified status
+ * @throws Error if the request fails
+ */
+export async function getAllLoanRequestsByStatus(status: LoanRequestStatus | string): Promise<LoanRequest[]> {
+    if (!status) {
+        throw new Error("Status is required");
+    }
+
+    const apiUrl = getApiUrl();
+    const response = await axios.get<{ data: LoanRequest[]; count: number }>(
+        `${apiUrl}/loan-requests?status=${status}`
+    );
+
+    return response.data.data || [];
+}
 
 /**
  * Fetches loan requests for a specific borrower address
