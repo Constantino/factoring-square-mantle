@@ -198,7 +198,7 @@ export default function LoanDashboardPage() {
                         whileHover={undefined}
                     >
                         <CardHeader className="p-4">
-                            <CardTitle className="text-base">Credit Score</CardTitle>
+                            <CardTitle className="text-base">On-chain Credit Score</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                             <CreditScoreGauge score={creditScore} />

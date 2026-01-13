@@ -1,8 +1,9 @@
-interface CreditScoreGaugeProps {
-    score: number;
-}
+import { useState, useEffect } from "react";
+import { CreditScoreGaugeProps } from "@/types/creditScoreGaugeProps";
 
 export function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
+    const minScore = 300;
+    const [animatedScore, setAnimatedScore] = useState(minScore);
     // Score ranges and categories
     const ranges = [
         { min: 300, max: 560, label: "Very Bad", color: "#ef4444" },
@@ -16,8 +17,32 @@ export function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
         return ranges.find(r => score >= r.min && score < r.max) || ranges[ranges.length - 1];
     };
 
+    // Animate score from minScore to target score
+    useEffect(() => {
+        const duration = 1500; // Animation duration in milliseconds
+        const startTime = Date.now();
+        const startScore = minScore;
+        const targetScore = score;
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function (ease-out cubic)
+            const eased = 1 - Math.pow(1 - progress, 3);
+
+            const currentScore = startScore + (targetScore - startScore) * eased;
+            setAnimatedScore(Math.round(currentScore));
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        animate();
+    }, [score]);
+
     const category = getCategory(score);
-    const minScore = 300;
     const maxScore = 850;
     const scoreRange = maxScore - minScore;
 
@@ -64,8 +89,8 @@ export function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
                 Z`;
     };
 
-    // Calculate indicator position
-    const indicatorAngle = scoreToAngle(score);
+    // Calculate indicator position using animated score
+    const indicatorAngle = scoreToAngle(animatedScore);
     const indicatorPoint = getArcPoint(indicatorAngle, outerRadius - 20);
 
     // Score markers
@@ -133,7 +158,7 @@ export function CreditScoreGauge({ score }: CreditScoreGaugeProps) {
             {/* Score display */}
             <div className="mt-4 text-center">
                 <div className="text-2xl font-bold text-foreground">
-                    {score}
+                    {animatedScore}
                 </div>
                 <div className="text-sm font-medium mt-1" style={{ color: category.color }}>
                     {category.label}
