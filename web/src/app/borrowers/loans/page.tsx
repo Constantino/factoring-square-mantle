@@ -12,7 +12,7 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
 import { LoanRequestWithVault, LoanStats } from "@/types/loans";
-import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats, calculateTotalDebt } from "@/services/loanService";
+import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats, calculateTotalDebt, calculateTotalInterest } from "@/services/loanService";
 import { formatCurrency } from "@/lib/format";
 
 export default function LoanDashboardPage() {
@@ -137,8 +137,9 @@ export default function LoanDashboardPage() {
         }
     };
 
-    // Calculate total debt from all active loans
+    // Calculate total debt and interest from all active loans
     const totalDebt = calculateTotalDebt(loanRequests);
+    const totalInterest = calculateTotalInterest(loanRequests);
 
     return (
         <div className="w-full p-8">
@@ -182,10 +183,16 @@ export default function LoanDashboardPage() {
                             <div className="space-y-3">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Total debt
+                                        Total Debt
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(totalDebt)}
+                                    </div>
+                                    <label className="text-xs font-medium text-foreground">
+                                        Total Interest
+                                    </label>
+                                    <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
+                                        {formatCurrency(totalInterest)}
                                     </div>
                                 </div>
                             </div>
