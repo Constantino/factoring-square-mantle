@@ -1,4 +1,6 @@
 export enum LoanStatus {
+    REQUESTED = 'REQUESTED',
+    REJECTED = 'REJECTED',
     LISTED = 'LISTED',
     ACTIVE = 'ACTIVE',
     PAID = 'PAID',
