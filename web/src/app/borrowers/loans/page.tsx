@@ -127,7 +127,7 @@ export default function LoanDashboardPage() {
                         whileHover={undefined}
                     >
                         <CardHeader className="p-4">
-                            <CardTitle className="text-base">Borrower Information</CardTitle>
+                            <CardTitle className="text-base">Stats</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                             <div className="space-y-2">
