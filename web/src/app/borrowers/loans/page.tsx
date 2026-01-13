@@ -178,14 +178,6 @@ export default function LoanDashboardPage() {
                             <div className="space-y-3">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        USDC Balance
-                                    </label>
-                                    <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                        $0.00
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-medium text-foreground">
                                         Debt
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
