@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
+import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
 import { LoanRequestWithVault, LoanStats } from "@/types/loans";
 import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats } from "@/services/loanService";
 
@@ -151,32 +152,11 @@ export default function LoanDashboardPage() {
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                             {isLoadingStats ? (
-                                <div className="text-xs text-muted-foreground">Loading...</div>
+                                <div className="text-xs text-muted-foreground text-center py-4">Loading...</div>
                             ) : loanStats ? (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-medium text-foreground">
-                                            Active: {loanStats.active}
-                                        </label>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-medium text-foreground">
-                                            Paid: {loanStats.paid}
-                                        </label>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-medium text-foreground">
-                                            Defaulted: {loanStats.defaulted}
-                                        </label>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-medium text-foreground">
-                                            Listed: {loanStats.listed}
-                                        </label>
-                                    </div>
-                                </div>
+                                <LoanStatsPieChart stats={loanStats} />
                             ) : (
-                                <div className="text-xs text-muted-foreground">No stats available</div>
+                                <div className="text-xs text-muted-foreground text-center py-4">No stats available</div>
                             )}
                         </CardContent>
                     </Card>
