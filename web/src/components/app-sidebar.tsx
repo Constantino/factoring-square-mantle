@@ -11,7 +11,7 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon } from "lucide-react"
+import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon, LayoutDashboard } from "lucide-react"
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
 
@@ -31,6 +31,12 @@ export function AppSidebar() {
             title: "Users",
             url: "/users",
             icon: Users,
+            roles: ['Admin'],
+        },
+        {
+            title: "Admin panel",
+            url: "/admin",
+            icon: LayoutDashboard,
             roles: ['Admin'],
         },
         {
