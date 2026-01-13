@@ -198,9 +198,9 @@ export default function VaultsPage() {
                                         <p className="text-sm font-medium">
                                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
                                                 vault.status === 'RELEASED' ? 'bg-green-100 text-green-800' :
-                                                vault.status === 'FUNDED' ? 'bg-blue-100 text-blue-800' :
-                                                vault.status === 'FUNDING' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
+                                                    vault.status === 'FUNDED' ? 'bg-blue-100 text-blue-800' :
+                                                        vault.status === 'FUNDING' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-gray-100 text-gray-800'
                                             }`}>
                                                 {vault.status}
                                             </span>

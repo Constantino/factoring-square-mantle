@@ -331,15 +331,16 @@ export async function repayLoan(
         // Use estimateGas to get better error messages
         try {
             await vaultContract.repay.estimateGas(amountInWei);
-        } catch (estimateError: any) {
+        } catch (estimateError: unknown) {
             console.error('Gas estimation failed:', estimateError);
             // Try to extract a meaningful error message
-            if (estimateError.reason) {
-                throw new Error(`Repayment validation failed: ${estimateError.reason}`);
-            } else if (estimateError.data) {
+            const error = estimateError as { reason?: string; data?: unknown; message?: string };
+            if (error.reason) {
+                throw new Error(`Repayment validation failed: ${error.reason}`);
+            } else if (error.data) {
                 throw new Error(`Repayment validation failed. Check vault state and borrower address.`);
             }
-            throw new Error(`Repayment validation failed: ${estimateError.message || 'Unknown error'}`);
+            throw new Error(`Repayment validation failed: ${error.message || 'Unknown error'}`);
         }
 
         const repayTx = await vaultContract.repay(amountInWei);

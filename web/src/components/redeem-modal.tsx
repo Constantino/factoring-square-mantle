@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -40,16 +40,9 @@ export function RedeemModal({
 
     // Calculate profit
     const profit = redeemableAmount !== undefined ? redeemableAmount - investedAmount : 0;
-    const profitPercentage = investedAmount > 0 && profit !== 0 
-        ? ((profit / investedAmount) * 100).toFixed(2) 
+    const profitPercentage = investedAmount > 0 && profit !== 0
+        ? ((profit / investedAmount) * 100).toFixed(2)
         : '0.00';
-
-    // Reset state when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setError(null);
-        }
-    }, [isOpen]);
 
     // Handle close - reset state when closing
     const handleClose = () => {

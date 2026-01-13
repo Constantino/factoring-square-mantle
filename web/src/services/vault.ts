@@ -218,7 +218,7 @@ export async function fetchLenderPortfolio(lenderAddress: string): Promise<Lende
     apiUrl = apiUrl.replace(/\/$/, "");
 
     const response = await axios.get(`${apiUrl}/vaults/lender/${lenderAddress}`);
-    const portfolioData = response.data.data || [];
+    const portfolioData: LenderPortfolio[] = response.data.data || [];
 
     // Check each vault to see if the lender has already redeemed their shares
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
@@ -229,14 +229,14 @@ export async function fetchLenderPortfolio(lenderAddress: string): Promise<Lende
 
     try {
         const provider = new ethers.JsonRpcProvider(rpcUrl);
-        
+
         // Get latest block number to ensure fresh reads
         const latestBlock = await provider.getBlockNumber();
         console.log(`Checking share balances at block ${latestBlock}`);
-        
+
         // Check share balance for each REPAID vault
         const enhancedPortfolio = await Promise.all(
-            portfolioData.map(async (item) => {
+            portfolioData.map(async (item: LenderPortfolio) => {
                 // Only check share balance for REPAID vaults
                 if (item.status === 'REPAID') {
                     try {

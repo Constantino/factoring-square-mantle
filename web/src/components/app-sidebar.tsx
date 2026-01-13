@@ -12,7 +12,7 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet } from "lucide-react"
+import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/stores/userStore"
@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator"
 interface MenuItem {
     title: string;
     url: string;
-    icon: any;
+    icon: LucideIcon;
     roles: UserRole[];
 }
 
