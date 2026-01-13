@@ -182,7 +182,7 @@ export default function LoanDashboardPage() {
                             <div className="space-y-3">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Debt
+                                        Total debt
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(totalDebt)}
