@@ -107,7 +107,7 @@ export function AppSidebar() {
                                         <Link href={item.url}>
                                             <item.icon />
                                             <span>{item.title}</span>
-                                            {item.title === "Admin panel" && (
+                                            {item.title === "Admin panel" && requestedCount > 0 && (
                                                 <NotificationBadge count={requestedCount} />
                                             )}
                                         </Link>
