@@ -14,6 +14,7 @@ import {
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 import { LogOut, ChevronDown } from "lucide-react";
+import { truncateAddress } from "@/lib/format";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -227,7 +228,7 @@ const Navbar = () => {
                                                         <TooltipProvider>
                                                             <CopyButton
                                                                 textToCopy={walletAddress}
-                                                                displayText={walletAddress}
+                                                                displayText={truncateAddress(walletAddress)}
                                                                 iconSize={12}
                                                                 textSize="xs"
                                                                 showText={true}
