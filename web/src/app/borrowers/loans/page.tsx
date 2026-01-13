@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useWallets } from "@privy-io/react-auth";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
-import { LoanRequestWithVault } from "@/types/loans";
-import { getLoanRequestsByBorrowerWithVaults, repayLoan } from "@/services/loanService";
+import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
+import { LoanRequestWithVault, LoanStats } from "@/types/loans";
+import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
     const router = useRouter();
@@ -21,13 +22,17 @@ export default function LoanDashboardPage() {
     const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [loanStats, setLoanStats] = useState<LoanStats | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
     const creditScore = 725; // Example score - can be made dynamic later
 
     useEffect(() => {
         if (walletAddress) {
             fetchLoanRequests();
+            fetchBorrowerStats();
         } else {
             setLoanRequests([]);
+            setLoanStats(null);
         }
     }, [walletAddress]);
 
@@ -54,6 +59,21 @@ export default function LoanDashboardPage() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchBorrowerStats = async () => {
+        if (!walletAddress) return;
+
+        try {
+            setIsLoadingStats(true);
+            const stats = await getBorrowerStats(walletAddress);
+            setLoanStats(stats);
+        } catch (err) {
+            console.error("Error fetching borrower stats:", err);
+            // Don't set error state for stats - just log it
+        } finally {
+            setIsLoadingStats(false);
         }
     };
 
@@ -105,8 +125,9 @@ export default function LoanDashboardPage() {
                 onProgress
             );
 
-            // Refresh loan requests after successful repayment
+            // Refresh loan requests and stats after successful repayment
             await fetchLoanRequests();
+            await fetchBorrowerStats();
 
             return txHash;
         } catch (error) {
@@ -128,40 +149,21 @@ export default function LoanDashboardPage() {
                         whileHover={undefined}
                     >
                         <CardHeader className="p-4">
-                            <CardTitle className="text-base">Borrower Information</CardTitle>
+                            <CardTitle className="text-base">Stats</CardTitle>
+                            {loanStats && (
+                                <CardDescription className="text-xs text-muted-foreground">
+                                    Total loans: {(loanStats.active ?? 0) + (loanStats.paid ?? 0) + (loanStats.defaulted ?? 0) + (loanStats.listed ?? 0)}
+                                </CardDescription>
+                            )}
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
-                            <div className="space-y-2">
-                                <label className="text-xs font-medium text-foreground">
-                                    Borrower Address
-                                </label>
-                                {walletAddress ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 px-3 py-1.5 bg-muted rounded-md text-xs text-foreground font-mono break-all">
-                                            {walletAddress}
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={handleCopy}
-                                            className="shrink-0"
-                                        >
-                                            {copied ? (
-                                                <Check className="h-4 w-4" />
-                                            ) : (
-                                                <Copy className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-muted-foreground italic">
-                                        {walletsReady && privyReady
-                                            ? "No wallet found. Please connect a wallet."
-                                            : "Loading wallet information..."}
-                                    </div>
-                                )}
-                            </div>
+                            {isLoadingStats ? (
+                                <div className="text-xs text-muted-foreground text-center py-4">Loading...</div>
+                            ) : loanStats ? (
+                                <LoanStatsPieChart stats={loanStats} />
+                            ) : (
+                                <div className="text-xs text-muted-foreground text-center py-4">No stats available</div>
+                            )}
                         </CardContent>
                     </Card>
 

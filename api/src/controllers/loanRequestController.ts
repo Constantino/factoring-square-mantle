@@ -341,40 +341,33 @@ export const changeLoanStatus = async (req: Request, res: Response): Promise<voi
     }
 };
 
-export const getLoanRequestByIdWithDetails = async (req: Request, res: Response): Promise<void> => {
+export const getLoanStatsByBorrowerAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { id } = req.params;
+        const { borrowerAddress } = req.params;
+
+        // Sanitize input
+        const sanitizedAddress = sanitizeWalletAddress(borrowerAddress);
 
         // Validate input
-        const loanRequestId = parseInt(id, 10);
-        if (isNaN(loanRequestId) || loanRequestId <= 0) {
+        const validationError = validateWalletAddress(sanitizedAddress);
+        if (validationError) {
             res.status(400).json({
-                error: 'Invalid loan request ID. ID must be a positive integer'
+                error: validationError
             });
             return;
         }
 
-        // Get loan request details with all related data
-        const loanDetails = await loanService.getLoanRequestDetails(loanRequestId);
+        // Get loan stats
+        const stats = await loanService.getLoanStatsByBorrower(sanitizedAddress);
 
         res.status(200).json({
-            message: 'Loan request details retrieved successfully',
-            data: loanDetails
+            message: 'Loan stats retrieved successfully',
+            data: stats
         });
     } catch (error) {
-        console.error('Error retrieving loan request details:', error);
-        
-        // Check if loan not found
-        if (error instanceof Error && error.message.includes('not found')) {
-            res.status(404).json({
-                error: 'Loan request not found',
-                details: error.message
-            });
-            return;
-        }
-
+        console.error('Error retrieving loan stats by borrower address:', error);
         res.status(500).json({
-            error: 'Failed to retrieve loan request details',
+            error: 'Failed to retrieve loan stats',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
