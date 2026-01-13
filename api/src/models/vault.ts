@@ -39,3 +39,9 @@ export interface Vault {
     created_at: Date;
     modified_at: Date;
 }
+
+// Repayment tracking validation
+export interface TrackRepaymentBody {
+    amount: number;
+    txHash: string;
+}

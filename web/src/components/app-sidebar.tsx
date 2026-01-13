@@ -11,14 +11,18 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
+<<<<<<< HEAD
 import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet } from "lucide-react"
+=======
+import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon } from "lucide-react"
+>>>>>>> main
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
 
 interface MenuItem {
     title: string;
     url: string;
-    icon: any;
+    icon: LucideIcon;
     roles: UserRole[];
 }
 
@@ -34,9 +38,9 @@ export function AppSidebar() {
             roles: ['Admin'],
         },
         {
-            title: "Borrower KYB",
-            url: "/borrower-kyb",
-            icon: Building2,
+            title: "My loans",
+            url: "/borrowers/loans",
+            icon: CreditCard,
             roles: ['Admin', 'Borrower'],
         },
         {
@@ -46,9 +50,9 @@ export function AppSidebar() {
             roles: ['Admin', 'Borrower'],
         },
         {
-            title: "My loans",
-            url: "/borrowers/loans",
-            icon: CreditCard,
+            title: "Borrower KYB",
+            url: "/borrower-kyb",
+            icon: Building2,
             roles: ['Admin', 'Borrower'],
         },
         {

@@ -181,19 +181,23 @@ export function ParticipateModal({
                 </div>
 
                 <DialogFooter>
-                    <Button 
-                        variant="outline" 
-                        onClick={handleClose}
-                        disabled={isProcessing}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleConfirm}
-                        disabled={amount <= 0 || amount > availableCapacity || isProcessing}
-                    >
-                        {isProcessing ? processingStep : "Confirm Participation"}
-                    </Button>
+                    {!txHash && (
+                        <>
+                            <Button 
+                                variant="outline" 
+                                onClick={handleClose}
+                                disabled={isProcessing}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleConfirm}
+                                disabled={amount <= 0 || amount > availableCapacity || isProcessing}
+                            >
+                                {isProcessing ? processingStep : "Confirm Participation"}
+                            </Button>
+                        </>
+                    )}
                 </DialogFooter>
 
                 {/* Success Message with Transaction Link */}

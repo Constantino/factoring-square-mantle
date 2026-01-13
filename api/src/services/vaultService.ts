@@ -5,7 +5,7 @@ import { CreateVaultBody, DeployVaultResult, Vault } from "../models/vault";
 import { CreateVaultLenderBody, VaultLender } from "../models/vaultLender";
 import { VAULTFACTORY_ABI } from "../abi/VaultFactory";
 import { VAULT_ABI } from "../abi/Vault";
-import { validateVaultStatusForDeposit, validateVaultCapacity, validateVaultStatusForRelease, validateVaultCapacityForRelease } from "../validators/vaultValidator";
+import { validateVaultStatusForDeposit, validateVaultCapacity, validateVaultStatusForRelease, validateVaultCapacityForRelease, validateVaultStatusForRepayment } from "../validators/vaultValidator";
 import { PoolClient } from "pg";
 import { VaultStatus } from "../types/vaultStatus";
 import { LoanStatus } from "../types/loanStatus";
@@ -90,7 +90,6 @@ export class VaultService {
             throw error;
         }
     }
-
     private async saveVault(vaultData: {
         vaultAddress: string;
         borrowerAddress: string;
@@ -327,21 +326,33 @@ export class VaultService {
             // Step 7: Commit transaction before blockchain interaction
             await client.query('COMMIT');
 
-            // Step 8: If vault is fully funded, release funds to borrower
+            // Step 8: If vault appears to be fully funded, verify with smart contract before releasing
             let fundReleased = false;
             let releaseTxHash: string | undefined;
 
             if (isFullyFunded) {
                 try {
-                    releaseTxHash = await this.releaseFundsToContract(vaultAddress);
-                    await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
+                    // CRITICAL: Read actual balance from smart contract to verify it's really funded
+                    console.log('📊 Verifying vault funding status from smart contract...');
+                    const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, this.provider);
+                    const totalAssets = await vaultContract.totalAssets();
+                    const totalAssetsUsdc = parseFloat(ethers.formatUnits(totalAssets, 6));
+                    
+                    console.log(`Smart contract state: totalAssets=${totalAssetsUsdc} USDC, maxCapacity=${maxCapacity} USDC`);
+                    
+                    // Only release if smart contract confirms it's fully funded
+                    if (totalAssetsUsdc >= maxCapacity) {
+                        releaseTxHash = await this.releaseFundsToContract(vaultAddress);
+                        await this.updateVaultReleaseStatus(vault.vault_id, releaseTxHash);
 
-                    fundReleased = true;
-                    updatedVault.fund_release_tx_hash = releaseTxHash;
-                    updatedVault.status = VaultStatus.RELEASED;
+                        fundReleased = true;
+                        updatedVault.fund_release_tx_hash = releaseTxHash;
+                        updatedVault.status = VaultStatus.RELEASED;
 
-                    await loanService.changeLoanStatus(vault.loan_request_id, LoanStatus.ACTIVE);
-
+                        await loanService.changeLoanStatus(vault.loan_request_id, LoanStatus.ACTIVE);
+                    } else {
+                        console.log(`⏳ Vault not yet fully funded in smart contract. totalAssets: ${totalAssetsUsdc}, required: ${maxCapacity}`);
+                    }
                 } catch (releaseError) {
                     console.error('❌ Error releasing funds to borrower:', releaseError);
                     console.log('Vault marked as FUNDED. Manual fund release may be required.');
@@ -484,6 +495,223 @@ export class VaultService {
 
         } catch (error) {
             console.error('Error in manual fund release:', error);
+            throw error;
+        }
+    }
+
+    async trackRepayment(
+        vaultAddress: string,
+        repaymentData: { amount: number; txHash: string }
+    ): Promise<{ vault: Vault; message: string }> {
+        try {
+            // Step 1: Get vault data
+            const query = `
+                SELECT vault_id, vault_address, borrower_address, status, max_capacity, current_capacity
+                FROM "Vaults"
+                WHERE vault_address = $1
+            `;
+            const result = await pool.query(query, [vaultAddress]);
+
+            if (result.rows.length === 0) {
+                throw new Error(`Vault not found: ${vaultAddress}`);
+            }
+
+            const vault = result.rows[0];
+
+            // Step 2: Validate vault status (must be RELEASED)
+            const statusError = validateVaultStatusForRepayment(vault.status);
+            if (statusError) {
+                throw new Error(statusError);
+            }
+
+            // Step 3: Read total assets from smart contract
+            console.log(`📖 Reading vault state from smart contract: ${vaultAddress}`);
+            const vaultContract = new ethers.Contract(
+                vaultAddress,
+                VAULT_ABI,
+                this.provider
+            );
+
+            const [totalAssets, vaultState] = await Promise.all([
+                vaultContract.totalAssets(),
+                vaultContract.state()
+            ]);
+
+            // Convert totalAssets from wei to USDC (6 decimals)
+            const totalAssetsInUsdc = parseFloat(ethers.formatUnits(totalAssets, 6));
+            const maxCapacity = parseFloat(vault.max_capacity);
+
+            console.log(`📊 Vault repayment status:`, {
+                vaultAddress,
+                totalAssets: totalAssetsInUsdc,
+                maxCapacity,
+                vaultState: vaultState.toString(),
+                repaymentAmount: repaymentData.amount
+            });
+
+            // Step 4: Check if vault is fully repaid (state == 2 means REPAID in smart contract)
+            const isFullyRepaid = vaultState === BigInt(2);
+
+            // Step 4.5: Record repayment in VaultRepayments table
+            console.log(`💾 Recording repayment in database...`);
+            const repaymentInsertQuery = `
+                INSERT INTO "VaultRepayments" (
+                    vault_id,
+                    amount,
+                    tx_hash,
+                    created_at
+                )
+                VALUES ($1, $2, $3, NOW())
+                ON CONFLICT (tx_hash) DO NOTHING
+            `;
+            await pool.query(repaymentInsertQuery, [
+                vault.vault_id,
+                repaymentData.amount,
+                repaymentData.txHash
+            ]);
+            console.log(`✅ Repayment recorded in database`);
+
+            // Step 5: Update vault status if fully repaid
+            let updatedVault: Vault;
+
+            if (isFullyRepaid) {
+                console.log(`✅ Vault fully repaid. Updating status to REPAID...`);
+                const updateQuery = `
+                    UPDATE "Vaults"
+                    SET status = $1,
+                        current_capacity = $2,
+                        modified_at = NOW()
+                    WHERE vault_id = $3
+                    RETURNING *
+                `;
+                const updateResult = await pool.query<Vault>(updateQuery, [
+                    VaultStatus.REPAID,
+                    totalAssetsInUsdc,
+                    vault.vault_id
+                ]);
+                updatedVault = updateResult.rows[0];
+
+                return {
+                    vault: updatedVault,
+                    message: 'Repayment tracked successfully. Vault is now fully repaid and ready for redemption.'
+                };
+            } else {
+                // Partial repayment - just update current capacity
+                console.log(`📝 Partial repayment tracked. Vault still active...`);
+                const updateQuery = `
+                    UPDATE "Vaults"
+                    SET current_capacity = $1,
+                        modified_at = NOW()
+                    WHERE vault_id = $2
+                    RETURNING *
+                `;
+                const updateResult = await pool.query<Vault>(updateQuery, [
+                    totalAssetsInUsdc,
+                    vault.vault_id
+                ]);
+                updatedVault = updateResult.rows[0];
+
+                return {
+                    vault: updatedVault,
+                    message: `Partial repayment tracked successfully. Remaining debt: ${(maxCapacity - totalAssetsInUsdc).toFixed(2)} USDC`
+                };
+            }
+        } catch (error) {
+            console.error('Error tracking repayment:', error);
+            throw error;
+        }
+    }
+
+    async trackRedemption(
+        vaultAddress: string,
+        redemptionData: { lenderAddress: string; amount: number; txHash: string }
+    ): Promise<{ vault: Vault; message: string }> {
+        try {
+            // Step 1: Get vault data
+            const query = `
+                SELECT vault_id, vault_address, borrower_address, status, max_capacity, current_capacity
+                FROM "Vaults"
+                WHERE vault_address = $1
+            `;
+            const result = await pool.query(query, [vaultAddress]);
+
+            if (result.rows.length === 0) {
+                throw new Error(`Vault not found: ${vaultAddress}`);
+            }
+
+            const vault = result.rows[0];
+
+            // Step 2: Validate vault status (must be REPAID)
+            if (vault.status !== VaultStatus.REPAID) {
+                throw new Error(`Vault must be in REPAID status to track redemption. Current status: ${vault.status}`);
+            }
+
+            // Step 3: Read share balance from smart contract to verify redemption
+            console.log(`📖 Verifying redemption from smart contract: ${vaultAddress}`);
+            const vaultContract = new ethers.Contract(
+                vaultAddress,
+                VAULT_ABI,
+                this.provider
+            );
+
+            const shareBalance = await vaultContract.balanceOf(redemptionData.lenderAddress);
+            console.log(`📊 Lender ${redemptionData.lenderAddress} share balance: ${shareBalance.toString()}`);
+
+            // Step 4: Check if all lenders have redeemed their shares
+            // Get all lenders for this vault
+            const lendersQuery = `
+                SELECT DISTINCT lender_address
+                FROM "VaultLenders"
+                WHERE vault_id = $1
+            `;
+            const lendersResult = await pool.query(lendersQuery, [vault.vault_id]);
+            const lenderAddresses = lendersResult.rows.map(row => row.lender_address);
+
+            // Check each lender's share balance
+            let allRedeemed = true;
+            for (const lenderAddr of lenderAddresses) {
+                const balance = await vaultContract.balanceOf(lenderAddr);
+                if (balance > BigInt(0)) {
+                    allRedeemed = false;
+                    console.log(`📊 Lender ${lenderAddr} still has ${balance.toString()} shares`);
+                    break;
+                }
+            }
+
+            console.log(`📊 All lenders redeemed: ${allRedeemed}`);
+
+            // Step 5: Update vault status if all shares have been redeemed
+            let updatedVault: Vault;
+
+            if (allRedeemed) {
+                console.log(`✅ All shares redeemed. Updating vault status to REDEEMED...`);
+                const updateQuery = `
+                    UPDATE "Vaults"
+                    SET status = $1,
+                        modified_at = NOW()
+                    WHERE vault_id = $2
+                    RETURNING *
+                `;
+                const updateResult = await pool.query<Vault>(updateQuery, [
+                    VaultStatus.REDEEMED,
+                    vault.vault_id
+                ]);
+                updatedVault = updateResult.rows[0];
+
+                return {
+                    vault: updatedVault,
+                    message: 'Redemption tracked successfully. All shares have been redeemed and vault is now closed.'
+                };
+            } else {
+                console.log(`📝 Partial redemption tracked. Some lenders still have shares...`);
+                // Just return the vault as is - no status change needed
+                return {
+                    vault,
+                    message: 'Redemption tracked successfully. Some lenders still need to redeem their shares.'
+                };
+            }
+        } catch (error) {
+            console.error('Error tracking redemption:', error);
             throw error;
         }
     }

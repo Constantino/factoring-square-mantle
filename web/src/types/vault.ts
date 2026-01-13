@@ -24,4 +24,7 @@ export interface LenderPortfolio {
     borrower_address: string;
     max_capacity: string;
     current_capacity: string;
+    status: string;
+    funded_at: string | null;
+    fund_release_tx_hash: string | null;
 }
