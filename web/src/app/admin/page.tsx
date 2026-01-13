@@ -233,40 +233,50 @@ export default function AdminPage() {
                             <CardTitle className="text-base">Balances</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Collateral Under Management
+                                        Collateral
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(0)}
                                     </div>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Total Capital Loaned
+                                        Loaned
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(0)}
                                     </div>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Realized yield for lenders
+                                        Realized Yield
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(0)}
                                     </div>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Unrealized yield for lenders
+                                        Unrealized Yield
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(0)}
                                     </div>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Delinquent accounts recovery
+                                        Accounts Recovery
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(0)}
                                     </div>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Management fee income
+                                        Management Income
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
                                         {formatCurrency(0)}
