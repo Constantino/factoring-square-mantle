@@ -108,26 +108,54 @@ export default function AdminPage() {
     const creditScore = 750;
 
     // Generate dummy monthly data for the past 12 months
+    // Based on realistic values for a healthy factoring company
     const generateMonthlyData = () => {
         const months = [];
         const baseDate = new Date(2024, 0, 1); // January 2024
+
+        // Starting values for a healthy factoring company
+        const startingCollateral = 2500000; // $2.5M in collateral
+        const advanceRate = 0.8; // 78% advance rate (typical for factoring)
+        const monthlyGrowthRate = 0.06; // 6% monthly growth (healthy but sustainable)
+        const realizedYieldRate = 0.015; // 1.5% monthly yield (realized)
+        const unrealizedYieldRate = 0.014; // 1.4% monthly yield (unrealized)
+        const delinquentRate = 0.012; // 1.2% of capital (low delinquency = healthy)
+        const managementFeeRate = 0.01; // 1.0% management fee
 
         for (let i = 0; i < 12; i++) {
             const date = new Date(baseDate);
             date.setMonth(baseDate.getMonth() + i);
 
-            // Generate realistic growth patterns with some variation
-            const monthMultiplier = 1 + (i * 0.08); // 8% growth per month
-            const variation = 0.9 + Math.random() * 0.2; // ±10% variation
+            // Steady growth with small monthly variations (±3%)
+            const growthFactor = Math.pow(1 + monthlyGrowthRate, i);
+            const variation = 0.97 + Math.random() * 0.06; // ±3% variation
+
+            // Calculate collateral (growing steadily)
+            const collateral = Math.round(startingCollateral * growthFactor * variation);
+
+            // Capital loaned is typically 70-85% of collateral (using 78% average)
+            const capitalLoaned = Math.round(collateral * advanceRate * (0.98 + Math.random() * 0.04));
+
+            // Realized yield is interest/fees already collected (1.5-2% of capital)
+            const realizedYield = Math.round(capitalLoaned * realizedYieldRate * (0.95 + Math.random() * 0.1));
+
+            // Unrealized yield is pending interest (slightly lower than realized)
+            const unrealizedYield = Math.round(capitalLoaned * unrealizedYieldRate * (0.95 + Math.random() * 0.1));
+
+            // Delinquent recovery is small for healthy companies (0.8-1.5% of capital)
+            const delinquentRecovery = Math.round(capitalLoaned * delinquentRate * (0.7 + Math.random() * 0.6));
+
+            // Management fees (0.6-0.8% of capital)
+            const managementFeeIncome = Math.round(capitalLoaned * managementFeeRate * (0.9 + Math.random() * 0.2));
 
             months.push({
                 month: date.toISOString(),
-                collateralUnderManagement: Math.round(500000 * monthMultiplier * variation),
-                totalCapitalLoaned: Math.round(400000 * monthMultiplier * variation),
-                realizedYield: Math.round(25000 * monthMultiplier * variation),
-                unrealizedYield: Math.round(15000 * monthMultiplier * variation),
-                delinquentRecovery: Math.round(5000 * monthMultiplier * (0.8 + Math.random() * 0.4)),
-                managementFeeIncome: Math.round(12000 * monthMultiplier * variation),
+                collateralUnderManagement: collateral,
+                totalCapitalLoaned: capitalLoaned,
+                realizedYield: realizedYield,
+                unrealizedYield: unrealizedYield,
+                delinquentRecovery: delinquentRecovery,
+                managementFeeIncome: managementFeeIncome,
             });
         }
 

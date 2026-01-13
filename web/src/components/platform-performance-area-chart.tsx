@@ -23,19 +23,15 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
 
     // Define colors for each metric
     const colors = {
-        collateralUnderManagement: "#3b82f6", // blue
-        totalCapitalLoaned: "#22c55e", // green
-        realizedYield: "#eab308", // yellow
-        unrealizedYield: "#f97316", // orange
+        realizedYield: "#22c55e", // green
+        unrealizedYield: "#6b7280", // gray
         delinquentRecovery: "#ef4444", // red
-        managementFeeIncome: "#8b5cf6", // purple
+        managementFeeIncome: "#3b82f6", // blue
     };
 
     // Find max value for scaling
     const maxValue = Math.max(
         ...data.flatMap(d => [
-            d.collateralUnderManagement,
-            d.totalCapitalLoaned,
             d.realizedYield,
             d.unrealizedYield,
             d.delinquentRecovery,
@@ -86,8 +82,6 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
     };
 
     // Extract data arrays
-    const collateralData = data.map(d => d.collateralUnderManagement);
-    const capitalData = data.map(d => d.totalCapitalLoaned);
     const realizedData = data.map(d => d.realizedYield);
     const unrealizedData = data.map(d => d.unrealizedYield);
     const recoveryData = data.map(d => d.delinquentRecovery);
@@ -121,16 +115,6 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
 
                 {/* Area fills (drawn in order, bottom to top) */}
                 <path
-                    d={createAreaPath(collateralData, colors.collateralUnderManagement)}
-                    fill={colors.collateralUnderManagement}
-                    fillOpacity="0.2"
-                />
-                <path
-                    d={createAreaPath(capitalData, colors.totalCapitalLoaned)}
-                    fill={colors.totalCapitalLoaned}
-                    fillOpacity="0.2"
-                />
-                <path
                     d={createAreaPath(realizedData, colors.realizedYield)}
                     fill={colors.realizedYield}
                     fillOpacity="0.2"
@@ -152,18 +136,6 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
                 />
 
                 {/* Lines (drawn on top) */}
-                <path
-                    d={createLinePath(collateralData)}
-                    fill="none"
-                    stroke={colors.collateralUnderManagement}
-                    strokeWidth="2"
-                />
-                <path
-                    d={createLinePath(capitalData)}
-                    fill="none"
-                    stroke={colors.totalCapitalLoaned}
-                    strokeWidth="2"
-                />
                 <path
                     d={createLinePath(realizedData)}
                     fill="none"
@@ -248,14 +220,6 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
             {/* Legend */}
             <div className="grid grid-cols-2 gap-1.5 mt-3 text-xs">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.collateralUnderManagement }} />
-                    <span className="text-foreground">Collateral Under Management</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.totalCapitalLoaned }} />
-                    <span className="text-foreground">Total Capital Loaned</span>
-                </div>
-                <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.realizedYield }} />
                     <span className="text-foreground">Realized Yield</span>
                 </div>
@@ -272,6 +236,6 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
                     <span className="text-foreground">Management Fee Income</span>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
