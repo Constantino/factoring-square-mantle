@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { useRef, useEffect, useState } from "react";
 import { useUserStore } from "@/stores/userStore";
 import { useRoleStore, UserRole } from "@/stores/roleStore";
 import { useUSDCBalance } from "@/hooks/use-usdc-balance";
@@ -12,7 +13,15 @@ import {
 } from "@/components/ui/tooltip";
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface RouteConfig {
     path: string;
@@ -27,6 +36,8 @@ const Navbar = () => {
     const { walletAddress } = useWalletAddress();
     const router = useRouter();
     const pathname = usePathname();
+    const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     // Define routes with their allowed roles
     const routes: RouteConfig[] = [
@@ -68,7 +79,49 @@ const Navbar = () => {
         return user.email.split('@')[0];
     };
 
+    // Blur the dropdown trigger button
+    const blurTrigger = () => {
+        const triggerButton = dropdownTriggerRef.current ||
+            (document.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLButtonElement);
+        if (triggerButton) {
+            triggerButton.blur();
+            triggerButton.classList.remove('focus-visible');
+            // Force remove focus by focusing body
+            if (document.activeElement === triggerButton) {
+                (document.body as HTMLElement).focus();
+                document.body.blur();
+            }
+        }
+    };
+
     const roles: UserRole[] = ['Admin', 'Lender', 'Borrower'];
+
+    // Blur button when dropdown closes and handle global clicks
+    useEffect(() => {
+        const handleDocumentClick = (e: MouseEvent) => {
+            // If dropdown is closed and we click anywhere, blur the trigger
+            if (!isDropdownOpen) {
+                const triggerButton = document.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLButtonElement;
+                if (triggerButton && document.activeElement === triggerButton) {
+                    blurTrigger();
+                }
+            }
+        };
+
+        if (!isDropdownOpen) {
+            // Blur immediately when closing
+            blurTrigger();
+
+            // Add global click listener
+            document.addEventListener('mousedown', handleDocumentClick, true);
+            document.addEventListener('click', handleDocumentClick, true);
+
+            return () => {
+                document.removeEventListener('mousedown', handleDocumentClick, true);
+                document.removeEventListener('click', handleDocumentClick, true);
+            };
+        }
+    }, [isDropdownOpen]);
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
@@ -124,23 +177,62 @@ const Navbar = () => {
                                     )}
                                 </div>
 
-                                {/* Username */}
-                                <div className="text-sm text-foreground font-medium">
-                                    {getUserName()}
+                                {/* Username Dropdown */}
+                                <div className="inline-block">
+                                    <DropdownMenu
+                                        onOpenChange={(open) => {
+                                            setIsDropdownOpen(open);
+                                            if (!open) {
+                                                blurTrigger();
+                                            }
+                                        }}
+                                        modal={false}
+                                    >
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                ref={dropdownTriggerRef}
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-sm text-foreground font-medium"
+                                                style={!isDropdownOpen ? {
+                                                    outline: 'none',
+                                                    boxShadow: 'none',
+                                                    borderColor: 'transparent'
+                                                } : undefined}
+                                                onMouseDown={(e) => {
+                                                    // Prevent focus on mouse down when dropdown is closed
+                                                    if (!isDropdownOpen && document.activeElement === e.currentTarget) {
+                                                        blurTrigger();
+                                                    }
+                                                }}
+                                            >
+                                                {getUserName()}
+                                                <ChevronDown className="ml-2 size-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                            className="w-56"
+                                            align="end"
+                                            onInteractOutside={() => {
+                                                // Blur the trigger button when clicking outside
+                                                setTimeout(blurTrigger, 0);
+                                            }}
+                                            onEscapeKeyDown={blurTrigger}
+                                        >
+                                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() => {
+                                                    // Dummy logout - to be implemented
+                                                    console.log('Logout clicked');
+                                                }}
+                                            >
+                                                <LogOut className="mr-2 size-4" />
+                                                Log out
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
-
-                                {/* Logout Button */}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        // Dummy logout - to be implemented
-                                        console.log('Logout clicked');
-                                    }}
-                                >
-                                    <LogOut className="size-4" />
-                                    Logout
-                                </Button>
                             </div>
 
                             {/* Row 2: Wallet Address with Copy */}
