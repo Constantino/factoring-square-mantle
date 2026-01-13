@@ -154,37 +154,25 @@ export default function LoanDashboardPage() {
                                 <div className="text-xs text-muted-foreground">Loading...</div>
                             ) : loanStats ? (
                                 <div className="space-y-3">
-                                    <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
                                         <label className="text-xs font-medium text-foreground">
-                                            Active Loans
+                                            Active: {loanStats.active}
                                         </label>
-                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                            {loanStats.active}
-                                        </div>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
                                         <label className="text-xs font-medium text-foreground">
-                                            Paid Loans
+                                            Paid: {loanStats.paid}
                                         </label>
-                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                            {loanStats.paid}
-                                        </div>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
                                         <label className="text-xs font-medium text-foreground">
-                                            Defaulted Loans
+                                            Defaulted: {loanStats.defaulted}
                                         </label>
-                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                            {loanStats.defaulted}
-                                        </div>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
                                         <label className="text-xs font-medium text-foreground">
-                                            Listed Loans
+                                            Listed: {loanStats.listed}
                                         </label>
-                                        <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                            {loanStats.listed}
-                                        </div>
                                     </div>
                                 </div>
                             ) : (
