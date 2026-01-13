@@ -5,11 +5,21 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
 import { PlatformPerformanceAreaChart } from "@/components/platform-performance-area-chart";
-import { LoanRequestWithVault, LoanStats } from "@/types/loans";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import { LoanRequestWithVault, LoanStats, LoanRequest } from "@/types/loans";
+import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
+import { getAllLoanRequestsByStatus } from "@/services/loanService";
 import { formatCurrency } from "@/lib/format";
 
 export default function AdminPage() {
-    // Dummy data
+    const router = useRouter();
+    const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Dummy data for stats (can be replaced with real API call later)
     const loanStats: LoanStats = {
         active: 12,
         paid: 8,
@@ -17,89 +27,54 @@ export default function AdminPage() {
         listed: 5,
     };
 
-    const loanRequests: LoanRequestWithVault[] = [
-        {
-            id: 1,
-            invoice_number: "INV-2024-001",
-            invoice_amount: 50000,
-            invoice_due_date: "2024-12-31",
-            term: 90,
-            customer_name: "Acme Corporation",
-            monthly_interest_rate: 0.015,
-            advance_rate: 0.8,
-            max_loan: 40000,
-            delivery_completed: true,
-            assignment_signed: true,
-            not_pledged: true,
-            borrower_address: "0x1234567890123456789012345678901234567890",
-            created_at: "2024-01-15T10:00:00Z",
-            modified_at: "2024-01-15T10:00:00Z",
-            status: "active",
-            vault_id: 1,
-            vault_address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-            vault_name: "Vault 1",
-            max_capacity: "40000",
-            current_capacity: "35000",
-            loan_request_id: 1,
-            vault_created_at: "2024-01-15T10:00:00Z",
-            vault_modified_at: "2024-01-15T10:00:00Z",
-            vault_fund_release_at: "2024-04-15T10:00:00Z",
-        },
-        {
-            id: 2,
-            invoice_number: "INV-2024-002",
-            invoice_amount: 75000,
-            invoice_due_date: "2024-11-30",
-            term: 60,
-            customer_name: "Tech Solutions Inc",
-            monthly_interest_rate: 0.018,
-            advance_rate: 0.75,
-            max_loan: 56250,
-            delivery_completed: true,
-            assignment_signed: true,
-            not_pledged: true,
-            borrower_address: "0x2345678901234567890123456789012345678901",
-            created_at: "2024-02-01T10:00:00Z",
-            modified_at: "2024-02-01T10:00:00Z",
-            status: "listed",
-            vault_id: 2,
-            vault_address: "0xbcdefabcdefabcdefabcdefabcdefabcdefabcde",
-            vault_name: "Vault 2",
-            max_capacity: "56250",
-            current_capacity: "0",
-            loan_request_id: 2,
-            vault_created_at: "2024-02-01T10:00:00Z",
-            vault_modified_at: "2024-02-01T10:00:00Z",
-            vault_fund_release_at: null,
-        },
-        {
-            id: 3,
-            invoice_number: "INV-2024-003",
-            invoice_amount: 30000,
-            invoice_due_date: "2024-10-15",
-            term: 45,
-            customer_name: "Global Industries",
-            monthly_interest_rate: 0.012,
-            advance_rate: 0.85,
-            max_loan: 25500,
-            delivery_completed: true,
-            assignment_signed: true,
-            not_pledged: true,
-            borrower_address: "0x3456789012345678901234567890123456789012",
-            created_at: "2024-03-10T10:00:00Z",
-            modified_at: "2024-03-10T10:00:00Z",
-            status: "paid",
-            vault_id: 3,
-            vault_address: "0xcdefabcdefabcdefabcdefabcdefabcdefabcdef",
-            vault_name: "Vault 3",
-            max_capacity: "25500",
-            current_capacity: "0",
-            loan_request_id: 3,
-            vault_created_at: "2024-03-10T10:00:00Z",
-            vault_modified_at: "2024-03-10T10:00:00Z",
-            vault_fund_release_at: "2024-04-25T10:00:00Z",
-        },
-    ];
+    useEffect(() => {
+        fetchLoanRequests();
+    }, []);
+
+    const fetchLoanRequests = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            // Fetch loan requests by status (REQUESTED)
+            const data = await getAllLoanRequestsByStatus(LoanRequestStatus.REQUESTED);
+
+            // Map LoanRequest[] to LoanRequestWithVault[] with default vault fields
+            // since the table expects vault information but getAllLoanRequestsByStatus doesn't return it
+            const mappedData: LoanRequestWithVault[] = data.map((loan: LoanRequest) => ({
+                ...loan,
+                vault_id: 0,
+                vault_address: '',
+                vault_name: '',
+                max_capacity: '0',
+                current_capacity: '0',
+                loan_request_id: loan.id,
+                vault_created_at: '',
+                vault_modified_at: '',
+                vault_fund_release_at: null,
+            }));
+
+            setLoanRequests(mappedData);
+        } catch (err) {
+            console.error("Error fetching loan requests:", err);
+            if (axios.isAxiosError(err)) {
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Failed to fetch loan requests"
+                );
+            } else {
+                setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleView = (requestId: number) => {
+        router.push(`/borrowers/loans/${requestId}`);
+    };
 
     // Dummy calculations
     const totalDebt = 125000;
@@ -303,9 +278,9 @@ export default function AdminPage() {
                 <LoansTable
                     title="Requested Loans"
                     loanRequests={loanRequests}
-                    isLoading={false}
-                    error={null}
-                    onView={() => { }}
+                    isLoading={isLoading}
+                    error={error}
+                    onView={handleView}
                     onPay={async () => ""}
                 />
             </div>
