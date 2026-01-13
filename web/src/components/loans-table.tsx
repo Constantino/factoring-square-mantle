@@ -15,6 +15,7 @@ export function LoansTable({
     error,
     onView,
     onPay,
+    title = "Loans",
 }: LoansTableProps) {
     const [payModalOpen, setPayModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LoanRequestWithVault | null>(null);
@@ -70,7 +71,7 @@ export function LoansTable({
             whileHover={undefined}
         >
             <CardHeader>
-                <CardTitle className="text-base">Loans</CardTitle>
+                <CardTitle className="text-base">{title}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">

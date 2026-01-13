@@ -301,6 +301,7 @@ export default function AdminPage() {
 
                 {/* Loans Table */}
                 <LoansTable
+                    title="Requested Loans"
                     loanRequests={loanRequests}
                     isLoading={false}
                     error={null}
