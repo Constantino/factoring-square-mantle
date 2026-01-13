@@ -172,17 +172,30 @@ export function calculateInterest(request: LoanRequestWithVault): number {
 }
 
 /**
+ * Helper function to calculate total from active loans using a mapper function
+ * @param loanRequests - Array of loan requests with vault information
+ * @param mapper - Function that maps a loan request to a numeric value
+ * @returns The total amount rounded to 6 decimals (USDC precision)
+ */
+function calculateTotalFromActiveLoans(
+    loanRequests: LoanRequestWithVault[],
+    mapper: (loan: LoanRequestWithVault) => number
+): number {
+    const activeLoans = loanRequests.filter(loan => loan.status === 'ACTIVE');
+    const total = activeLoans.reduce((sum, loan) => {
+        return sum + mapper(loan);
+    }, 0);
+    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
+    return Math.round(total * 1e6) / 1e6;
+}
+
+/**
  * Calculate total debt from all active loans
  * @param loanRequests - Array of loan requests with vault information
  * @returns The total debt amount (principal + interest) from all active loans
  */
 export function calculateTotalDebt(loanRequests: LoanRequestWithVault[]): number {
-    const activeLoans = loanRequests.filter(loan => loan.status === 'ACTIVE');
-    const totalDebt = activeLoans.reduce((sum, loan) => {
-        const debt = getTotalDebt(loan);
-        return sum + debt;
-    }, 0);
-    return totalDebt;
+    return calculateTotalFromActiveLoans(loanRequests, getTotalDebt);
 }
 
 /**
@@ -191,13 +204,7 @@ export function calculateTotalDebt(loanRequests: LoanRequestWithVault[]): number
  * @returns The total interest amount from all active loans
  */
 export function calculateTotalInterest(loanRequests: LoanRequestWithVault[]): number {
-    const activeLoans = loanRequests.filter(loan => loan.status === 'ACTIVE');
-    const totalInterest = activeLoans.reduce((sum, loan) => {
-        const interest = calculateInterest(loan);
-        return sum + interest;
-    }, 0);
-    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
-    return Math.round(totalInterest * 1e6) / 1e6;
+    return calculateTotalFromActiveLoans(loanRequests, calculateInterest);
 }
 
 /**
@@ -206,8 +213,7 @@ export function calculateTotalInterest(loanRequests: LoanRequestWithVault[]): nu
  * @returns The total capital amount (sum of max_loan) from all active loans
  */
 export function calculateTotalCapital(loanRequests: LoanRequestWithVault[]): number {
-    const activeLoans = loanRequests.filter(loan => loan.status === 'ACTIVE');
-    const totalCapital = activeLoans.reduce((sum, loan) => {
+    return calculateTotalFromActiveLoans(loanRequests, (loan) => {
         // Handle both number and string types for max_loan
         let maxLoan = 0;
         if (typeof loan.max_loan === 'number') {
@@ -216,10 +222,8 @@ export function calculateTotalCapital(loanRequests: LoanRequestWithVault[]): num
             const parsed = parseFloat(loan.max_loan);
             maxLoan = !isNaN(parsed) && isFinite(parsed) ? parsed : 0;
         }
-        return sum + maxLoan;
-    }, 0);
-    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
-    return Math.round(totalCapital * 1e6) / 1e6;
+        return maxLoan;
+    });
 }
 
 /**
