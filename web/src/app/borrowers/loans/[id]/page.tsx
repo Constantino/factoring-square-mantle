@@ -9,6 +9,8 @@ import { LoanRequestDetail } from "@/types/loans";
 import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
 import { getLoanRequestDetail, changeLoanRequestStatus } from "@/services/loanService";
 import { useRoleStore } from "@/stores/roleStore";
+import { ApproveModal } from "@/components/approve-modal";
+import { getApiUrl } from "@/lib/api";
 
 export default function LoanRequestDetailPage() {
     const params = useParams();
@@ -20,6 +22,7 @@ export default function LoanRequestDetailPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isChangingStatus, setIsChangingStatus] = useState(false);
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
 
     useEffect(() => {
         if (loanId) {
@@ -85,10 +88,45 @@ export default function LoanRequestDetailPage() {
 
     const handleApprove = async () => {
         if (!loanDetail) return;
+        setIsApproveModalOpen(true);
+    };
 
-        // Dummy implementation for now
-        console.log("Approve loan:", loanDetail.id);
-        alert("Approve functionality - coming soon!");
+    const handleApproveConfirm = async () => {
+        if (!loanDetail) return;
+
+        try {
+            setIsChangingStatus(true);
+            setError(null);
+
+            const apiUrl = getApiUrl();
+            const response = await axios.post(
+                `${apiUrl}/loan-requests/${loanDetail.id}/approve`
+            );
+
+            // Close modal on success
+            setIsApproveModalOpen(false);
+
+            // Refresh loan details after approval
+            await fetchLoanDetail();
+        } catch (err) {
+            console.error("Error approving loan:", err);
+            if (axios.isAxiosError(err)) {
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Failed to approve loan request"
+                );
+            } else {
+                setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            }
+        } finally {
+            setIsChangingStatus(false);
+        }
+    };
+
+    const handleApproveModalClose = () => {
+        setIsApproveModalOpen(false);
     };
 
     const handleReject = async () => {
@@ -407,6 +445,14 @@ export default function LoanRequestDetailPage() {
                         </>
                     )}
                 </div>
+
+                {/* Approve Modal */}
+                <ApproveModal
+                    isOpen={isApproveModalOpen}
+                    onClose={handleApproveModalClose}
+                    onConfirm={handleApproveConfirm}
+                    isChangingStatus={isChangingStatus}
+                />
             </div>
         </div>
     );
