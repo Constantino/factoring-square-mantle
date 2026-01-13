@@ -5,6 +5,7 @@ export interface Vault {
     vault_name: string;
     max_capacity: string;
     current_capacity: string;
+    loan_request_id: number;
     status: string;
     funded_at: string | null;
     fund_release_tx_hash: string | null;

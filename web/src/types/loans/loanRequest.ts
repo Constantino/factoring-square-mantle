@@ -6,6 +6,7 @@ export interface LoanRequest {
     term: number;
     customer_name: string;
     monthly_interest_rate: number;
+    advance_rate: number;
     max_loan: number;
     delivery_completed: boolean;
     assignment_signed: boolean;

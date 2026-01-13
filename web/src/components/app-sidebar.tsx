@@ -11,7 +11,7 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, LogOut, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon } from "lucide-react"
+import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
 
