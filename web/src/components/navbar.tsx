@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
 import { useUserStore } from "@/stores/userStore";
 import { useRoleStore, UserRole } from "@/stores/roleStore";
+import { usePrivy } from "@privy-io/react-auth";
 import { useUSDCBalance } from "@/hooks/use-usdc-balance";
 import { useMNTBalance } from "@/hooks/use-mnt-balance";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
@@ -30,11 +31,12 @@ interface RouteConfig {
 }
 
 const Navbar = () => {
-    const { isLoggedIn, user } = useUserStore();
+    const { isLoggedIn, user, logout } = useUserStore();
     const { currentRole, setRole } = useRoleStore();
     const { balance: usdcBalance, isLoading: isLoadingUsdc } = useUSDCBalance();
     const { balance: mntBalance, isLoading: isLoadingMnt } = useMNTBalance();
     const { walletAddress } = useWalletAddress();
+    const { logout: privyLogout } = usePrivy();
     const router = useRouter();
     const pathname = usePathname();
     const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
@@ -93,6 +95,13 @@ const Navbar = () => {
                 document.body.blur();
             }
         }
+    };
+
+    // Handle logout
+    const handleLogout = () => {
+        logout();
+        privyLogout();
+        router.push('/');
     };
 
     const roles: UserRole[] = ['Admin', 'Lender', 'Borrower'];
@@ -239,10 +248,7 @@ const Navbar = () => {
                                             )}
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
-                                                onClick={() => {
-                                                    // Dummy logout - to be implemented
-                                                    console.log('Logout clicked');
-                                                }}
+                                                onClick={handleLogout}
                                             >
                                                 <LogOut className="mr-2 size-4" />
                                                 Log out
