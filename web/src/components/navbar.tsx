@@ -15,7 +15,7 @@ import {
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 import { LogOut, ChevronDown } from "lucide-react";
-import { truncateAddress } from "@/lib/format";
+import { truncateAddress, formatCurrency } from "@/lib/format";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -183,7 +183,7 @@ const Navbar = () => {
                                     {isLoadingUsdc ? (
                                         <span>Loading...</span>
                                     ) : (
-                                        <span className="font-mono">${usdcBalance} USDC</span>
+                                        <span className="font-mono">{formatCurrency(Number(usdcBalance))} USDC</span>
                                     )}
                                 </div>
 
