@@ -12,9 +12,11 @@ import { LoanRequestWithVault, LoanStats, LoanRequest } from "@/types/loans";
 import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
 import { getAllLoanRequestsByStatus } from "@/services/loanService";
 import { formatCurrency } from "@/lib/format";
+import { useRequestedCountStore } from "@/stores/requestedCountStore";
 
 export default function AdminPage() {
     const router = useRouter();
+    const { setRequestedCount } = useRequestedCountStore();
     const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,9 @@ export default function AdminPage() {
 
             // Fetch loan requests by status (REQUESTED)
             const data = await getAllLoanRequestsByStatus(LoanRequestStatus.REQUESTED);
+
+            // Update the requested count in the store
+            setRequestedCount(data.length);
 
             // Map LoanRequest[] to LoanRequestWithVault[] with default vault fields
             // since the table expects vault information but getAllLoanRequestsByStatus doesn't return it
