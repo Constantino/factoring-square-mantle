@@ -1,5 +1,5 @@
 // Validation functions
-import {CreateVaultBody} from "../models/vault";
+import {CreateVaultBody, TrackRepaymentBody} from "../models/vault";
 import {CreateVaultLenderBody} from "../models/vaultLender";
 import {ethers} from "ethers";
 import { VaultStatus } from "../types/vaultStatus";
@@ -171,5 +171,43 @@ export const validateVaultCapacity = (
                `Attempted: ${depositAmount}, Would be: ${newCapacity}`;
     }
     
+    return null;
+};
+
+const validateRepaymentRequiredFields = (body: TrackRepaymentBody): string | null => {
+    if (!body.amount || !body.txHash) {
+        return 'Missing required fields: amount, txHash';
+    }
+    return null;
+};
+
+const validateRepaymentAmount = (amount: number): string | null => {
+    if (amount <= 0) {
+        return 'Repayment amount must be positive';
+    }
+    return null;
+};
+
+export const validateRepaymentTracking = (
+    vaultAddress: string,
+    body: TrackRepaymentBody
+): string | null => {
+    const requiredFieldsError = validateRepaymentRequiredFields(body);
+    if (requiredFieldsError) return requiredFieldsError;
+
+    const vaultAddressError = validateVaultAddress(vaultAddress);
+    if (vaultAddressError) return vaultAddressError;
+
+    const amountError = validateRepaymentAmount(body.amount);
+    if (amountError) return amountError;
+
+    return null;
+};
+
+// Vault status validation for repayment
+export const validateVaultStatusForRepayment = (status: VaultStatus): string | null => {
+    if (status !== VaultStatus.RELEASED) {
+        return `Vault must be in RELEASED status to accept repayments. Current status: ${status}`;
+    }
     return null;
 };

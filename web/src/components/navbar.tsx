@@ -29,9 +29,9 @@ const Navbar = () => {
     // Define routes with their allowed roles
     const routes: RouteConfig[] = [
         { path: '/users', roles: ['Admin'] },
-        { path: '/borrower-kyb', roles: ['Admin', 'Borrower'] },
-        { path: '/loan-request', roles: ['Admin', 'Borrower'] },
         { path: '/borrowers/loans', roles: ['Admin', 'Borrower'] },
+        { path: '/loan-request', roles: ['Admin', 'Borrower'] },
+        { path: '/borrower-kyb', roles: ['Admin', 'Borrower'] },
         { path: '/vaults', roles: ['Admin', 'Lender'] },
         { path: '/lenders/loans', roles: ['Admin', 'Lender'] },
     ];

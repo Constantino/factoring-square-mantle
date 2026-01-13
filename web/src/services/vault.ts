@@ -197,7 +197,7 @@ export async function participateInVault(
 }
 
 /**
- * Fetch lender portfolio
+ * Fetch lender portfolio with redemption status
  * @param lenderAddress - The address of the lender
  * @returns Promise with array of portfolio items
  * @throws Error if the API call fails
@@ -218,5 +218,235 @@ export async function fetchLenderPortfolio(lenderAddress: string): Promise<Lende
     apiUrl = apiUrl.replace(/\/$/, "");
 
     const response = await axios.get(`${apiUrl}/vaults/lender/${lenderAddress}`);
-    return response.data.data || [];
+    const portfolioData: LenderPortfolio[] = response.data.data || [];
+
+    // Check each vault to see if the lender has already redeemed their shares
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+    if (!rpcUrl) {
+        console.warn("RPC URL not configured, skipping share balance checks");
+        return portfolioData;
+    }
+
+    try {
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+        // Get latest block number to ensure fresh reads
+        const latestBlock = await provider.getBlockNumber();
+        console.log(`Checking share balances at block ${latestBlock}`);
+
+        // Check share balance for each REPAID vault
+        const enhancedPortfolio = await Promise.all(
+            portfolioData.map(async (item: LenderPortfolio) => {
+                // Only check share balance for REPAID vaults
+                if (item.status === 'REPAID') {
+                    try {
+                        const vaultContract = new ethers.Contract(item.vault_address, VAULT_ABI, provider);
+                        
+                        // Read balance from blockchain
+                        const shareBalance = await vaultContract.balanceOf(lenderAddress);
+                        
+                        console.log(`Vault ${item.vault_address} - Share balance: ${shareBalance.toString()}`);
+                        
+                        // If share balance is 0, the lender has already redeemed
+                        if (shareBalance === BigInt(0)) {
+                            console.log(`✓ Vault ${item.vault_address} marked as REDEEMED`);
+                            return { ...item, status: 'REDEEMED' };
+                        }
+                    } catch (error) {
+                        console.error(`Error checking share balance for vault ${item.vault_address}:`, error);
+                        // Return original item if check fails
+                    }
+                }
+                return item;
+            })
+        );
+
+        return enhancedPortfolio;
+    } catch (error) {
+        console.error("Error checking share balances:", error);
+        // Return original data if check fails
+        return portfolioData;
+    }
+}
+
+/**
+ * Redeem shares from a vault to receive USDC back
+ * @param vaultAddress - The address of the vault contract
+ * @param wallet - The Privy wallet object
+ * @param onProgress - Optional callback to report progress
+ * @returns Promise with transaction hash and redeemed amount
+ */
+export async function redeemShares(
+    vaultAddress: string,
+    wallet: PrivyWallet,
+    onProgress?: (step: string) => void
+): Promise<{ txHash: string; redeemedAmount: number }> {
+    try {
+        onProgress?.("Connecting to wallet...");
+        
+        // Get the Ethereum provider from Privy wallet
+        const provider = await wallet.getEthereumProvider();
+        
+        // Check current network
+        onProgress?.("Checking network...");
+        const network = await provider.request({ method: 'eth_chainId' }) as string;
+        const targetChainId = `0x${parseInt(process.env.NEXT_PUBLIC_MANTLE_SEPOLIA_CHAIN_ID || '5003').toString(16)}`;
+        
+        console.log('Current network:', network, 'Target:', targetChainId);
+        
+        // Switch to Mantle Sepolia if needed
+        if (network !== targetChainId) {
+            onProgress?.("Switching to Mantle Sepolia...");
+            console.log('Switching to Mantle Sepolia...');
+            try {
+                await provider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: targetChainId }],
+                });
+            } catch (switchError) {
+                const error = switchError as NetworkSwitchError;
+                if (error.code === 4902) {
+                    await provider.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: targetChainId,
+                            chainName: 'Mantle Sepolia',
+                            nativeCurrency: {
+                                name: 'MNT',
+                                symbol: 'MNT',
+                                decimals: 18
+                            },
+                            rpcUrls: ['https://rpc.sepolia.mantle.xyz'],
+                            blockExplorerUrls: ['https://explorer.sepolia.mantle.xyz']
+                        }],
+                    });
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+        
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+        const userAddress = await signer.getAddress();
+
+        console.log('Starting redemption:', {
+            vaultAddress,
+            userAddress
+        });
+
+        // Create vault contract instance
+        const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
+
+        // Check vault state
+        onProgress?.("Validating vault state...");
+        const vaultState = await vaultContract.state();
+        console.log('Vault state:', vaultState.toString());
+
+        // State enum: 0 = FUNDING, 1 = ACTIVE, 2 = REPAID
+        if (vaultState !== BigInt(2)) {
+            const stateNames = ['FUNDING', 'ACTIVE', 'REPAID'];
+            throw new Error(
+                `Vault is not in REPAID state. Current state: ${stateNames[Number(vaultState)]}. ` +
+                `The vault must be fully repaid before redemption.`
+            );
+        }
+
+        // Get user's share balance
+        onProgress?.("Checking your shares...");
+        const shareBalance = await vaultContract.balanceOf(userAddress);
+        console.log('User share balance:', shareBalance.toString());
+
+        if (shareBalance === BigInt(0)) {
+            throw new Error('You have no shares to redeem in this vault');
+        }
+
+        // Preview how much USDC will be received
+        onProgress?.("Calculating redemption amount...");
+        const previewAssets = await vaultContract.previewRedeem(shareBalance);
+        const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
+        console.log('Will receive USDC:', redeemedAmountUsdc);
+
+        // Redeem all shares
+        onProgress?.("Redeeming shares...");
+        console.log('Redeeming shares...');
+        
+        const redeemTx = await vaultContract.redeem(shareBalance, userAddress, userAddress);
+        console.log('Redemption transaction sent:', redeemTx.hash);
+
+        onProgress?.("Confirming redemption...");
+        // Wait for redemption transaction to be mined
+        const receipt = await redeemTx.wait();
+        console.log('Redemption confirmed in block:', receipt.blockNumber);
+
+        onProgress?.("✅ Redemption successful!");
+
+        // Record redemption in backend database
+        try {
+            onProgress?.("Recording redemption...");
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const fullUrl = apiUrl.startsWith('http') ? apiUrl : `http://${apiUrl}`;
+
+            await axios.post(
+                `${fullUrl}/vaults/${vaultAddress}/redemptions`,
+                {
+                    lenderAddress: userAddress,
+                    amount: redeemedAmountUsdc,
+                    txHash: redeemTx.hash
+                }
+            );
+            console.log('Redemption recorded in database');
+        } catch (dbError) {
+            // Log error but don't fail the transaction
+            console.error('Failed to record redemption in database:', dbError);
+            // Transaction succeeded on-chain, so we still return the result
+        }
+
+        return {
+            txHash: redeemTx.hash,
+            redeemedAmount: redeemedAmountUsdc
+        };
+    } catch (error) {
+        console.error("Error redeeming shares:", error);
+        throw error;
+    }
+}
+
+/**
+ * Preview how much USDC will be received when redeeming shares
+ * @param vaultAddress - The address of the vault contract
+ * @param wallet - The Privy wallet object
+ * @returns Promise with the redeemable amount in USDC
+ */
+export async function previewRedemption(
+    vaultAddress: string,
+    wallet: PrivyWallet
+): Promise<number> {
+    try {
+        // Get the Ethereum provider from Privy wallet
+        const provider = await wallet.getEthereumProvider();
+        
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+        const userAddress = await signer.getAddress();
+
+        // Create vault contract instance
+        const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
+
+        // Get user's share balance
+        const shareBalance = await vaultContract.balanceOf(userAddress);
+
+        if (shareBalance === BigInt(0)) {
+            return 0;
+        }
+
+        // Preview how much USDC will be received
+        const previewAssets = await vaultContract.previewRedeem(shareBalance);
+        const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
+
+        return redeemedAmountUsdc;
+    } catch (error) {
+        console.error("Error previewing redemption:", error);
+        throw error;
+    }
 }

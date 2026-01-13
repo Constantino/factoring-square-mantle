@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -23,19 +22,11 @@ export function PayModal({
     maxLoan,
     monthlyInterestRate,
     vaultFundReleaseAt,
-    invoiceDueDate,
     isProcessing = false,
     processingStep = "Processing...",
     txHash = null,
 }: PayModalProps) {
     const [error, setError] = useState<string | null>(null);
-
-    // Reset state when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setError(null);
-        }
-    }, [isOpen]);
 
     // Handle close - reset state when closing
     const handleClose = () => {

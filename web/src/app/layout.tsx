@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useUserStore } from "@/stores/userStore";
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect } from "react";
+import { ToastProvider } from "@/hooks/use-toast";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -141,7 +142,9 @@ export default function RootLayout({
                     clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || ""}
                     config={privyConfig}
                 >
-                    <LayoutContent>{children}</LayoutContent>
+                    <ToastProvider>
+                        <LayoutContent>{children}</LayoutContent>
+                    </ToastProvider>
                 </PrivyProvider>
             </body>
         </html>

@@ -127,7 +127,8 @@ export function calculateInterest(request: LoanRequestWithVault): number {
         return 0;
     }
 
-    return interest;
+    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
+    return Math.round(interest * 1e6) / 1e6;
 }
 
 /**
@@ -162,7 +163,9 @@ export function getTotalDebt(request: LoanRequestWithVault): number {
         return maxLoan;
     }
 
-    return total;
+    // Fix floating-point precision errors by rounding to 6 decimals (USDC precision)
+    // This prevents errors like "0.8076000000000001" when passing to ethers.parseUnits
+    return Math.round(total * 1e6) / 1e6;
 }
 
 /**
@@ -328,15 +331,16 @@ export async function repayLoan(
         // Use estimateGas to get better error messages
         try {
             await vaultContract.repay.estimateGas(amountInWei);
-        } catch (estimateError: any) {
+        } catch (estimateError: unknown) {
             console.error('Gas estimation failed:', estimateError);
             // Try to extract a meaningful error message
-            if (estimateError.reason) {
-                throw new Error(`Repayment validation failed: ${estimateError.reason}`);
-            } else if (estimateError.data) {
+            const error = estimateError as { reason?: string; data?: unknown; message?: string };
+            if (error.reason) {
+                throw new Error(`Repayment validation failed: ${error.reason}`);
+            } else if (error.data) {
                 throw new Error(`Repayment validation failed. Check vault state and borrower address.`);
             }
-            throw new Error(`Repayment validation failed: ${estimateError.message || 'Unknown error'}`);
+            throw new Error(`Repayment validation failed: ${error.message || 'Unknown error'}`);
         }
 
         const repayTx = await vaultContract.repay(amountInWei);
@@ -349,10 +353,27 @@ export async function repayLoan(
 
         onProgress?.("✅ Repayment successful!");
 
+        const apiUrl = getApiUrl();
+
+        // Track repayment in vault
+        try {
+            onProgress?.("Tracking repayment in vault...");
+            await axios.post(
+                `${apiUrl}/vaults/${vaultAddress}/repayments`,
+                {
+                    amount,
+                    txHash: repayTx.hash
+                }
+            );
+            console.log('Vault repayment tracked successfully');
+        } catch (vaultError) {
+            // Log error but don't fail - repayment was successful on-chain
+            console.error('Failed to track vault repayment:', vaultError);
+        }
+
         // Update loan status to PAID after successful repayment
         try {
             onProgress?.("Updating loan status...");
-            const apiUrl = getApiUrl();
             await axios.patch(
                 `${apiUrl}/loan-requests/${loanRequestId}/status`,
                 { status: 'PAID' }
@@ -370,4 +391,3 @@ export async function repayLoan(
         throw error;
     }
 }
-
