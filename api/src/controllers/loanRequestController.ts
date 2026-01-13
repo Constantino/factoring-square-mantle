@@ -373,3 +373,41 @@ export const getLoanStatsByBorrowerAddress = async (req: Request, res: Response)
     }
 };
 
+export const getLoanRequestByIdWithDetails = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        // Validate input
+        const loanRequestId = parseInt(id, 10);
+        if (isNaN(loanRequestId) || loanRequestId <= 0) {
+            res.status(400).json({
+                error: 'Invalid loan request ID. ID must be a positive integer'
+            });
+            return;
+        }
+
+        // Get loan request details with all related data
+        const loanDetails = await loanService.getLoanRequestDetails(loanRequestId);
+
+        res.status(200).json({
+            message: 'Loan request details retrieved successfully',
+            data: loanDetails
+        });
+    } catch (error) {
+        console.error('Error retrieving loan request details:', error);
+
+        // Check if loan not found
+        if (error instanceof Error && error.message.includes('not found')) {
+            res.status(404).json({
+                error: 'Loan request not found',
+                details: error.message
+            });
+            return;
+        }
+
+        res.status(500).json({
+            error: 'Failed to retrieve loan request details',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};

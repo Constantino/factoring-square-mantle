@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import { useWallets } from "@privy-io/react-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { fetchVaults, participateInVault} from "@/services/vault";
 import {Vault} from "@/types/vault";
 
 export default function VaultsPage() {
+    const router = useRouter();
     const [vaults, setVaults] = useState<Vault[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,10 @@ export default function VaultsPage() {
     const handleLend = (vault: Vault) => {
         setSelectedVault(vault);
         setIsModalOpen(true);
+    };
+
+    const handleView = (loanRequestId: number) => {
+        router.push(`/borrowers/loans/${loanRequestId}`);
     };
 
     const handleConfirmParticipation = async (amount: number) => {
@@ -256,13 +262,22 @@ export default function VaultsPage() {
                                     )}
 
                                     {/* Participate Button - Disable if already funded */}
-                                    <Button
-                                        className="w-full mt-2"
-                                        onClick={() => handleLend(vault)}
-                                        disabled={vault.status === 'FUNDED' || vault.status === 'RELEASED'}
-                                    >
-                                        {vault.status === 'FUNDED' || vault.status === 'RELEASED' ? 'Fully Funded' : 'Lend'}
-                                    </Button>
+                                    <div className="flex gap-2 mt-2">
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => handleView(vault.loan_request_id)}
+                                        >
+                                            View
+                                        </Button>
+                                        <Button
+                                            className="flex-1"
+                                            onClick={() => handleLend(vault)}
+                                            disabled={vault.status === 'FUNDED' || vault.status === 'RELEASED'}
+                                        >
+                                            {vault.status === 'FUNDED' || vault.status === 'RELEASED' ? 'Fully Funded' : 'Lend'}
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}

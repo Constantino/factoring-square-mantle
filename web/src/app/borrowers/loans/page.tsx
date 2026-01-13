@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useWallets } from "@privy-io/react-auth";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
@@ -14,6 +15,7 @@ import { LoanRequestWithVault, LoanStats } from "@/types/loans";
 import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats } from "@/services/loanService";
 
 export default function LoanDashboardPage() {
+    const router = useRouter();
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
     const { wallets } = useWallets();
     const [copied, setCopied] = useState(false);
@@ -88,8 +90,7 @@ export default function LoanDashboardPage() {
     };
 
     const handleView = (requestId: number) => {
-        // TODO: Implement view functionality
-        console.log("View request:", requestId);
+        router.push(`/borrowers/loans/${requestId}`);
     };
 
     const handlePayLoan = async (requestId: number, amount: number, onProgress?: (step: string) => void): Promise<string> => {

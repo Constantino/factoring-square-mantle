@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ethers } from "ethers";
 import { getApiUrl } from "@/lib/api";
-import { LoanRequest, LoanRequestWithVault, LoanStats } from "@/types/loans";
+import { LoanRequest, LoanRequestWithVault, LoanStats, LoanRequestDetail } from "@/types/loans";
 import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import { PrivyWallet } from "@/types/providers";
@@ -45,6 +45,27 @@ export async function getLoanRequestsByBorrowerWithVaults(
     );
 
     return response.data.data || [];
+}
+
+/**
+ * Fetches complete loan request details including vaults, lenders, repayments, and metrics
+ * @param loanRequestId - The ID of the loan request
+ * @returns Promise resolving to complete loan request details
+ * @throws Error if the request fails or loan not found
+ */
+export async function getLoanRequestDetail(
+    loanRequestId: number
+): Promise<LoanRequestDetail> {
+    if (!loanRequestId || loanRequestId <= 0) {
+        throw new Error("Valid loan request ID is required");
+    }
+
+    const apiUrl = getApiUrl();
+    const response = await axios.get<{ data: LoanRequestDetail }>(
+        `${apiUrl}/loan-requests/${loanRequestId}/details`
+    );
+
+    return response.data.data;
 }
 
 /**
