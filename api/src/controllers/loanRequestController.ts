@@ -7,6 +7,8 @@ import { sanitizeLoanRequestRequest, sanitizeWalletAddress } from '../utils/sani
 import { vaultService } from '../services/vaultService';
 import { loanService } from '../services/loanService';
 import { LoanStatus } from '../types/loanStatus';
+import { uploadFileToSupabase } from '../services/fileUploadService';
+import { MulterRequest } from '../types/multer';
 
 const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> => {
     const query = `
@@ -521,6 +523,67 @@ export const getAllLoanRequests = async (req: Request, res: Response): Promise<v
         console.error('Error retrieving loan requests:', error);
         res.status(500).json({
             error: 'Failed to retrieve loan requests',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const uploadFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Check if file exists in request (multer adds file to req)
+        const multerReq = req as MulterRequest;
+
+        if (!multerReq.file) {
+            res.status(400).json({
+                error: 'No file provided. Please upload a file.'
+            });
+            return;
+        }
+
+        const file = multerReq.file;
+
+        const originalFileName = file.originalname || 'uploaded_file';
+        const contentType = file.mimetype || 'application/octet-stream';
+
+        // Validate file type (optional - you can customize this)
+        const allowedMimeTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/jpg',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+
+        if (!allowedMimeTypes.includes(contentType)) {
+            res.status(400).json({
+                error: `File type not allowed. Allowed types: ${allowedMimeTypes.join(', ')}`
+            });
+            return;
+        }
+
+        // Upload file to Supabase
+        const uploadResult = await uploadFileToSupabase(
+            file,
+            originalFileName,
+            contentType
+        );
+
+        res.status(200).json({
+            message: 'File uploaded successfully',
+            data: {
+                fileName: originalFileName,
+                path: uploadResult.path,
+                url: uploadResult.url,
+                publicUrl: uploadResult.publicUrl,
+                contentType: contentType,
+                size: file.size
+            }
+        });
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        res.status(500).json({
+            error: 'Failed to upload file',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

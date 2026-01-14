@@ -1,5 +1,6 @@
 import express, { Router } from 'express';
 import * as loanRequestController from '../controllers/loanRequestController';
+import { upload } from '../config/multer';
 
 const router: Router = express.Router();
 
@@ -12,6 +13,7 @@ router.get('/:id', loanRequestController.getLoanRequestById);
 router.post('/', loanRequestController.createLoanRequest);
 router.post('/:id/approve', loanRequestController.approveLoanRequest);
 router.patch('/:id/status', loanRequestController.changeLoanStatus);
+router.post('/upload', upload.single('file'), loanRequestController.uploadFile);
 
 export default router;
 
