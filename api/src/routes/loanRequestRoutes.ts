@@ -10,7 +10,7 @@ router.get('/borrower/:borrowerAddress', loanRequestController.getLoanRequestByB
 router.get('/', loanRequestController.getAllLoanRequests);
 router.get('/:id/details', loanRequestController.getLoanRequestByIdWithDetails);
 router.get('/:id', loanRequestController.getLoanRequestById);
-router.post('/', loanRequestController.createLoanRequest);
+router.post('/', upload.single('file'), loanRequestController.createLoanRequest);
 router.post('/:id/approve', loanRequestController.approveLoanRequest);
 router.patch('/:id/status', loanRequestController.changeLoanStatus);
 router.post('/upload', upload.single('file'), loanRequestController.uploadFile);
