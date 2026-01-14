@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ErrorPanel } from "@/components/error-panel";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatCurrencyPrecise } from "@/lib/format";
 
 interface RedeemModalProps {
     isOpen: boolean;
@@ -105,7 +105,7 @@ export function RedeemModal({
                                         <div>
                                             <p className="text-xs text-muted-foreground mb-1">Interest Earned</p>
                                             <p className={`text-lg font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                                                {profit >= 0 ? '+' : ''}{formatCurrencyPrecise(profit)}
                                             </p>
                                         </div>
                                         <div className="text-right">
@@ -122,10 +122,10 @@ export function RedeemModal({
                                     <div className="space-y-1">
                                         <p className="text-sm font-medium text-muted-foreground">Total You Will Receive</p>
                                         <p className="text-3xl font-bold text-green-600">
-                                            {formatCurrency(redeemableAmount)}
+                                            {formatCurrencyPrecise(redeemableAmount)}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            = Investment ({formatCurrency(investedAmount)}) + Interest ({formatCurrency(profit)})
+                                            = Investment ({formatCurrency(investedAmount)}) + Interest ({formatCurrencyPrecise(profit)})
                                         </p>
                                     </div>
                                 </div>

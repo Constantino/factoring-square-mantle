@@ -253,7 +253,13 @@ export const trackRepayment = async (req: Request, res: Response): Promise<void>
 export const trackRedemption = async (req: Request, res: Response): Promise<void> => {
     try {
         const { vaultAddress } = req.params;
-        const body: { lenderAddress: string; amount: number; txHash: string } = req.body;
+        const body: { 
+            lenderAddress: string; 
+            lenderId?: number; 
+            sharesRedeemed?: number; 
+            amount: number; 
+            txHash: string 
+        } = req.body;
 
         // Validate vault address format
         const validationError = validateVaultAddressParam(vaultAddress);
@@ -262,11 +268,11 @@ export const trackRedemption = async (req: Request, res: Response): Promise<void
             return;
         }
 
-        // Validate request body
+        // Validate request body - lenderId and sharesRedeemed are optional for backwards compatibility
         if (!body.lenderAddress || !body.amount || !body.txHash) {
             res.status(400).json({
                 error: 'Missing required fields',
-                details: 'lenderAddress, amount, and txHash are required'
+                details: 'lenderAddress, amount, and txHash are required. lenderId and sharesRedeemed are optional.'
             });
             return;
         }

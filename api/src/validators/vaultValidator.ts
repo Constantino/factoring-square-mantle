@@ -211,3 +211,19 @@ export const validateVaultStatusForRepayment = (status: VaultStatus): string | n
     }
     return null;
 };
+
+// Vault status validation for redemption
+export const validateVaultStatusForRedemption = (status: VaultStatus): string | null => {
+    if (status !== VaultStatus.REPAID) {
+        return `Vault must be in REPAID status to track redemption. Current status: ${status}`;
+    }
+    return null;
+};
+
+// Shares amount validation
+export const validateSharesAmount = (sharesAmount: string | number | undefined | null): boolean => {
+    // Returns true if shares amount is missing or zero (needs calculation)
+    if (!sharesAmount) return true;
+    if (sharesAmount === '0' || sharesAmount === 0) return true;
+    return false;
+};
