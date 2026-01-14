@@ -13,6 +13,13 @@ contract Vault is ERC4626, Ownable {
     address public immutable BORROWER;
     uint256 public immutable MAX_CAPACITY;
     uint256 public immutable MATURITY_DATE;
+    address public immutable TREASURY;
+
+    /// @notice Fee percentage in basis points (100 = 1%)
+    uint256 public constant FEE_PERCENTAGE = 100;
+
+    /// @notice Basis points divisor (10000 = 100%)
+    uint256 public constant BASIS_POINTS = 10000;
 
     enum State {
         FUNDING,
@@ -22,6 +29,18 @@ contract Vault is ERC4626, Ownable {
 
     State public state;
 
+    /// @notice Emitted when a repayment is made with fee
+    /// @param borrower The address of the borrower making the repayment
+    /// @param totalPaid The total amount paid by borrower (amount + fee)
+    /// @param amountToVault The amount received by the vault
+    /// @param feeToTreasury The 1% fee sent to treasury
+    event RepaymentWithFee(
+        address indexed borrower,
+        uint256 totalPaid,
+        uint256 amountToVault,
+        uint256 feeToTreasury
+    );
+
     constructor(
         string memory name,
         string memory symbol,
@@ -29,11 +48,14 @@ contract Vault is ERC4626, Ownable {
         address _borrower,
         uint256 _maxCapacity,
         uint256 _maturityDate,
-        address _owner
+        address _owner,
+        address _treasury
     ) ERC4626(asset_) ERC20(name, symbol) Ownable(_owner) {
+        require(_treasury != address(0), "Invalid treasury address");
         BORROWER = _borrower;
         MAX_CAPACITY = _maxCapacity;
         MATURITY_DATE = _maturityDate;
+        TREASURY = _treasury;
         state = State.FUNDING;
     }
 
@@ -54,11 +76,24 @@ contract Vault is ERC4626, Ownable {
     function repay(uint256 amount) external {
         require(msg.sender == BORROWER, "Not borrower");
         require(state == State.ACTIVE, "Not active");
+        require(amount > 0, "Amount must be greater than 0");
 
+        // Calculate 1% fee on the repayment amount
+        uint256 feeAmount = (amount * FEE_PERCENTAGE) / BASIS_POINTS;
+        uint256 totalAmount = amount + feeAmount;
+
+        // Transfer fee to treasury
+        IERC20(asset()).safeTransferFrom(msg.sender, TREASURY, feeAmount);
+
+        // Transfer repayment amount to vault
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Check if vault is fully repaid
         if (totalAssets() >= MAX_CAPACITY) {
             state = State.REPAID;
         }
+
+        emit RepaymentWithFee(msg.sender, totalAmount, amount, feeAmount);
     }
 
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {

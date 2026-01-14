@@ -42,6 +42,18 @@ export interface Vault {
 
 // Repayment tracking validation
 export interface TrackRepaymentBody {
-    amount: number;
+    amount: number;          // Net amount to vault (what vault was owed)
     txHash: string;
+}
+
+// Repayment record with fee tracking
+export interface VaultRepayment {
+    repayment_id: number;
+    vault_id: number;
+    gross_amount: string;    // Total paid by borrower (net + fee)
+    fee_amount: string;      // 1% fee to treasury
+    net_amount: string;      // Amount to vault
+    amount: string;          // DEPRECATED: same as net_amount, kept for backward compatibility
+    tx_hash: string;
+    created_at: string;
 }

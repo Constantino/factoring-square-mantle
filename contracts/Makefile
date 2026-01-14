@@ -1,4 +1,4 @@
-.PHONY: deploy deploy-mock-usdc deploy-invoice-nft deploy-all build test clean generate-all-abis
+.PHONY: deploy deploy-mock-usdc deploy-invoice-nft deploy-treasury deploy-all build test clean generate-all-abis
 
 include .env
 export
@@ -14,13 +14,16 @@ deploy-all:
 	@echo "Starting Full Deployment Process"
 	@echo "=========================================="
 	@echo ""
-	@echo "Step 1/3: Deploying Mock USDC..."
+	@echo "Step 1/4: Deploying Mock USDC..."
 	@$(MAKE) deploy-mock-usdc
 	@echo ""
-	@echo "Step 2/3: Deploying VaultFactory..."
+	@echo "Step 2/4: Deploying Treasury..."
+	@$(MAKE) deploy-treasury
+	@echo ""
+	@echo "Step 3/4: Deploying VaultFactory..."
 	@$(MAKE) deploy
 	@echo ""
-	@echo "Step 3/3: Deploying InvoiceNFT..."
+	@echo "Step 4/4: Deploying InvoiceNFT..."
 	@$(MAKE) deploy-invoice-nft
 	@echo ""
 	@echo "=========================================="
@@ -31,12 +34,17 @@ deploy-all:
 	@echo "-------------------"
 	@if [ -f ".env" ]; then \
 		MOCK_USDC=$$(grep USDC_ADDRESS .env | cut -d'=' -f2); \
+		TREASURY=$$(grep TREASURY_ADDRESS .env | cut -d'=' -f2); \
 		VAULT_FACTORY=$$(grep VAULT_FACTORY_ADDRESS .env | cut -d'=' -f2); \
 		INVOICE_NFT=$$(grep INVOICE_NFT_ADDRESS .env | cut -d'=' -f2); \
 		echo ""; \
 		echo "Mock USDC:"; \
 		echo "  Address: $$MOCK_USDC"; \
 		echo "  Explorer: https://sepolia.mantlescan.xyz/address/$$MOCK_USDC"; \
+		echo ""; \
+		echo "Treasury:"; \
+		echo "  Address: $$TREASURY"; \
+		echo "  Explorer: https://sepolia.mantlescan.xyz/address/$$TREASURY"; \
 		echo ""; \
 		echo "VaultFactory:"; \
 		echo "  Address: $$VAULT_FACTORY"; \
@@ -190,11 +198,56 @@ deploy-invoice-nft:
 	fi
 	@rm -f deploy-invoice-nft.log
 
+deploy-treasury:
+	@echo "Deploying Treasury..."
+	@forge script script/DeployTreasury.s.sol:DeployTreasury \
+		--rpc-url $(RPC_URL) \
+		--broadcast \
+		--verify \
+		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		--legacy \
+		2>&1 | tee deploy-treasury.log
+	@echo ""
+	@echo "Updating .env files with Treasury address..."
+	@TREASURY_ADDRESS=$$(grep "Treasury Address:" deploy-treasury.log | tail -1 | awk '{print $$3}'); \
+	if [ -n "$$TREASURY_ADDRESS" ]; then \
+		if grep -q "TREASURY_ADDRESS=" .env; then \
+			grep -v "TREASURY_ADDRESS=" .env > .env.tmp && \
+			echo "TREASURY_ADDRESS=$$TREASURY_ADDRESS" >> .env.tmp && \
+			mv .env.tmp .env; \
+		else \
+			echo "" >> .env; \
+			echo "TREASURY_ADDRESS=$$TREASURY_ADDRESS" >> .env; \
+		fi; \
+		echo "✓ Updated .env with Treasury address: $$TREASURY_ADDRESS"; \
+		if [ -f "../api/.env" ]; then \
+			if grep -q "TREASURY_ADDRESS=" ../api/.env; then \
+				grep -v "TREASURY_ADDRESS=" ../api/.env > ../api/.env.tmp && \
+				echo "TREASURY_ADDRESS=$$TREASURY_ADDRESS" >> ../api/.env.tmp && \
+				mv ../api/.env.tmp ../api/.env; \
+			else \
+				echo "" >> ../api/.env; \
+				echo "TREASURY_ADDRESS=$$TREASURY_ADDRESS" >> ../api/.env; \
+			fi; \
+			echo "✓ Updated ../api/.env with Treasury address: $$TREASURY_ADDRESS"; \
+		fi; \
+		echo ""; \
+		echo "==========================================";\
+		echo "Deployed Contract:"; \
+		echo "==========================================";\
+		echo ""; \
+		echo "Treasury:"; \
+		echo "  Address: $$TREASURY_ADDRESS"; \
+		echo "  Explorer: https://sepolia.mantlescan.xyz/address/$$TREASURY_ADDRESS"; \
+		echo ""; \
+	fi
+	@rm -f deploy-treasury.log
+
 generate-all-abis:
 	forge build
 	@mkdir -p ../web/src/app/abi
 	@mkdir -p ../api/src/abi
-	@for contract in MockUSDC Vault VaultFactory InvoiceNFT; do \
+	@for contract in MockUSDC Vault VaultFactory InvoiceNFT Treasury; do \
 		file="out/$$contract.sol/$$contract.json"; \
 		if [ -f "$$file" ]; then \
 			contract_name_upper=$$(echo "$$contract" | tr '[:lower:]' '[:upper:]'); \

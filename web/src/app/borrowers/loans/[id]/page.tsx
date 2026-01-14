@@ -269,14 +269,18 @@ export default function LoanRequestDetailPage() {
                     {/* Financial Summary */}
                     <div>
                         <h2 className="text-base font-semibold mb-3 text-center">Financial Summary</h2>
-                        <div className="grid grid-cols-3 gap-8">
+                        <div className="grid grid-cols-4 gap-8">
                             <div className="text-center">
                                 <p className="text-xs text-muted-foreground mb-1">Total Funded</p>
                                 <p className="text-lg font-bold text-green-600">{formatCurrency(loanDetail.total_funded)}</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-xs text-muted-foreground mb-1">Total Repaid</p>
+                                <p className="text-xs text-muted-foreground mb-1">Total Repaid (Net)</p>
                                 <p className="text-lg font-bold text-blue-600">{formatCurrency(loanDetail.total_repaid)}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs text-muted-foreground mb-1">Protocol Fees (1%)</p>
+                                <p className="text-lg font-bold text-purple-600">{formatCurrency(loanDetail.total_fees_paid || 0)}</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-xs text-muted-foreground mb-1">Outstanding Balance</p>
@@ -405,36 +409,51 @@ export default function LoanRequestDetailPage() {
                                                     <thead>
                                                         <tr className="border-b bg-muted/50 text-xs text-muted-foreground">
                                                             <th className="text-center py-2 px-3 font-medium">ID</th>
-                                                            <th className="text-center py-2 px-3 font-medium">Amount</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Gross Amount</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Fee (1%)</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Net Amount</th>
                                                             <th className="text-center py-2 px-3 font-medium">Transaction</th>
                                                             <th className="text-center py-2 px-3 font-medium">Date</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {vault.repayments.map((repayment) => (
-                                                            <tr key={repayment.repayment_id} className="border-b last:border-0 hover:bg-muted/30">
-                                                                <td className="py-2 px-3 text-center font-mono">
-                                                                    #{repayment.repayment_id}
-                                                                </td>
-                                                                <td className="py-2 px-3 text-center font-medium">
-                                                                    {formatCurrency(repayment.amount)}
-                                                                </td>
-                                                                <td className="py-2 px-3 text-center">
-                                                                    <a
-                                                                        href={`https://sepolia.mantlescan.xyz/tx/${repayment.tx_hash}`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
-                                                                    >
-                                                                        {shortenAddress(repayment.tx_hash)}
-                                                                        <ExternalLink className="h-2.5 w-2.5" />
-                                                                    </a>
-                                                                </td>
-                                                                <td className="py-2 px-3 text-center text-muted-foreground">
-                                                                    {formatDate(repayment.created_at)}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
+                                                        {vault.repayments.map((repayment) => {
+                                                            // Use new fields if available, fallback to old amount field
+                                                            const grossAmount = repayment.gross_amount || repayment.amount;
+                                                            const feeAmount = repayment.fee_amount || '0';
+                                                            const netAmount = repayment.net_amount || repayment.amount;
+
+                                                            return (
+                                                                <tr key={repayment.repayment_id} className="border-b last:border-0 hover:bg-muted/30">
+                                                                    <td className="py-2 px-3 text-center font-mono">
+                                                                        #{repayment.repayment_id}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center font-medium">
+                                                                        {formatCurrency(grossAmount)}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center text-purple-600 font-medium">
+                                                                        {formatCurrency(feeAmount)}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center font-medium">
+                                                                        {formatCurrency(netAmount)}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center">
+                                                                        <a
+                                                                            href={`https://sepolia.mantlescan.xyz/tx/${repayment.tx_hash}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                                                        >
+                                                                            {shortenAddress(repayment.tx_hash)}
+                                                                            <ExternalLink className="h-2.5 w-2.5" />
+                                                                        </a>
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center text-muted-foreground">
+                                                                        {formatDate(repayment.created_at)}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>

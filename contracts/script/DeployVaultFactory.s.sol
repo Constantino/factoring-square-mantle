@@ -11,6 +11,10 @@ contract DeployVaultFactory is Script {
         address usdcAddress = vm.envAddress("USDC_ADDRESS");
         require(usdcAddress != address(0), "USDC_ADDRESS not set");
 
+        // Get Treasury address from environment variable
+        address treasuryAddress = vm.envAddress("TREASURY_ADDRESS");
+        require(treasuryAddress != address(0), "TREASURY_ADDRESS not set");
+
         // Test vault parameters
         string memory invoiceName = "TEST";
         string memory invoiceNumber = "001";
@@ -24,14 +28,16 @@ contract DeployVaultFactory is Script {
         console.log("=== Deployment Starting ===");
         console.log("Deployer:", deployer);
         console.log("USDC Address:", usdcAddress);
+        console.log("Treasury Address:", treasuryAddress);
 
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy VaultFactory
-        VaultFactory factory = new VaultFactory(usdcAddress);
+        VaultFactory factory = new VaultFactory(usdcAddress, treasuryAddress);
         require(address(factory) != address(0), "Factory deployment failed");
         require(factory.OWNER() == deployer, "Factory owner mismatch");
         require(address(factory.ASSET()) == usdcAddress, "Factory asset mismatch");
+        require(factory.TREASURY() == treasuryAddress, "Factory treasury mismatch");
 
         // Deploy test Vault through Factory
         address vaultAddress = factory.deployVault(invoiceName, invoiceNumber, borrower, maxCapacity, maturityDate);
@@ -43,6 +49,7 @@ contract DeployVaultFactory is Script {
         require(vault.MAX_CAPACITY() == maxCapacity, "Vault capacity mismatch");
         require(vault.MATURITY_DATE() == maturityDate, "Vault maturity mismatch");
         require(vault.owner() == deployer, "Vault owner mismatch");
+        require(vault.TREASURY() == treasuryAddress, "Vault treasury mismatch");
 
         vm.stopBroadcast();
 

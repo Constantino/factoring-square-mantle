@@ -98,6 +98,9 @@ export class LoanService {
                                 SELECT COALESCE(json_agg(
                                     jsonb_build_object(
                                         'repayment_id', vr.repayment_id,
+                                        'gross_amount', vr.gross_amount,
+                                        'fee_amount', vr.fee_amount,
+                                        'net_amount', vr.net_amount,
                                         'amount', vr.amount,
                                         'tx_hash', vr.tx_hash,
                                         'created_at', vr.created_at
@@ -115,13 +118,24 @@ export class LoanService {
                 COALESCE(SUM(v.max_capacity::numeric), 0) as total_funded,
                 COALESCE(
                     (
-                        SELECT SUM(vr.amount::numeric)
+                        SELECT SUM(vr.net_amount::numeric)
                         FROM "VaultRepayments" vr
                         INNER JOIN "Vaults" v2 ON v2.vault_id = vr.vault_id
                         WHERE v2.loan_request_id = lr.id
                     ),
                     0
-                ) as total_repaid
+                ) as total_repaid,
+
+                -- Total fees paid (1% of repayments)
+                COALESCE(
+                    (
+                        SELECT SUM(vr.fee_amount::numeric)
+                        FROM "VaultRepayments" vr
+                        INNER JOIN "Vaults" v2 ON v2.vault_id = vr.vault_id
+                        WHERE v2.loan_request_id = lr.id
+                    ),
+                    0
+                ) as total_fees_paid
                 
             FROM "LoanRequests" lr
             LEFT JOIN "Vaults" v ON v.loan_request_id = lr.id
@@ -137,15 +151,17 @@ export class LoanService {
 
         const loanData = result.rows[0];
 
-        // Calculate outstanding balance
+        // Calculate outstanding balance and format fee data
         const totalFunded = parseFloat(loanData.total_funded) || 0;
         const totalRepaid = parseFloat(loanData.total_repaid) || 0;
+        const totalFeesPaid = parseFloat(loanData.total_fees_paid) || 0;
         const outstandingBalance = Math.max(0, totalFunded - totalRepaid);
 
         return {
             ...loanData,
             total_funded: totalFunded,
             total_repaid: totalRepaid,
+            total_fees_paid: totalFeesPaid,
             outstanding_balance: outstandingBalance
         };
     }

@@ -601,24 +601,44 @@ export class VaultService {
             // Step 4: Check if vault is fully repaid (state == 2 means REPAID in smart contract)
             const isFullyRepaid = vaultState === BigInt(2);
 
-            // Step 4.5: Record repayment in VaultRepayments table
+            // Step 4.5: Calculate fee and record repayment in VaultRepayments table
             console.log(`💾 Recording repayment in database...`);
+
+            // Calculate 1% fee
+            // repaymentData.amount is the net amount the vault receives
+            const netAmount = repaymentData.amount;
+            const feeAmount = netAmount * 0.01; // 1% fee
+            const grossAmount = netAmount + feeAmount; // Total paid by borrower
+
+            console.log(`💰 Fee calculation:`, {
+                netAmount,
+                feeAmount,
+                grossAmount,
+                feePercentage: '1%'
+            });
+
             const repaymentInsertQuery = `
                 INSERT INTO "VaultRepayments" (
                     vault_id,
+                    gross_amount,
+                    fee_amount,
+                    net_amount,
                     amount,
                     tx_hash,
                     created_at
                 )
-                VALUES ($1, $2, $3, NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, NOW())
                 ON CONFLICT (tx_hash) DO NOTHING
             `;
             await pool.query(repaymentInsertQuery, [
                 vault.vault_id,
-                repaymentData.amount,
+                grossAmount,
+                feeAmount,
+                netAmount,
+                netAmount, // For backward compatibility
                 repaymentData.txHash
             ]);
-            console.log(`✅ Repayment recorded in database`);
+            console.log(`✅ Repayment recorded in database with fee tracking`);
 
             // Step 5: Update vault status if fully repaid
             let updatedVault: Vault;

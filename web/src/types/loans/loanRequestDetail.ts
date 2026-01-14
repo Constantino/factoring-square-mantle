@@ -18,7 +18,10 @@ export interface VaultLender {
 export interface VaultRepayment {
     repayment_id: number;
     vault_id: number;
-    amount: string;
+    gross_amount?: string;      // Total paid by borrower (net + fee)
+    fee_amount?: string;        // 1% protocol fee to treasury
+    net_amount?: string;        // Amount received by vault
+    amount: string;             // DEPRECATED: Use net_amount instead (kept for backward compatibility)
     tx_hash: string;
     created_at: string;
 }
@@ -48,6 +51,7 @@ export interface VaultWithDetails {
 export interface LoanRequestDetail extends LoanRequest {
     vaults: VaultWithDetails[];
     total_funded: number;
-    total_repaid: number;
+    total_repaid: number;           // Net amount received by vault(s)
+    total_fees_paid?: number;       // Total 1% protocol fees paid
     outstanding_balance: number;
 }

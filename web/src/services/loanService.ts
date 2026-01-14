@@ -390,9 +390,17 @@ export async function repayLoan(
         const signer = await ethersProvider.getSigner();
         const userAddress = await signer.getAddress();
 
+        // Calculate total amount including 1% fee
+        // The 'amount' parameter is what the vault is owed
+        // Borrower must pay: amount + 1% fee
+        const feeAmount = amount * 0.01;  // 1% fee
+        const totalAmount = amount + feeAmount;
+
         console.log('Starting loan repayment:', {
             vaultAddress,
-            amount,
+            netAmountToVault: amount,
+            feeAmount,
+            totalAmountToPay: totalAmount,
             userAddress
         });
 
@@ -404,9 +412,10 @@ export async function repayLoan(
 
         console.log('USDC address:', usdcAddress);
 
-        // Convert amount to wei (assuming 6 decimals for USDC)
-        const amountInWei = ethers.parseUnits(amount.toString(), 6);
-        console.log('Amount in wei:', amountInWei.toString());
+        // Convert total amount (including fee) to wei (assuming 6 decimals for USDC)
+        // We need to approve the TOTAL amount since the vault contract will pull both net + fee
+        const totalAmountInWei = ethers.parseUnits(totalAmount.toString(), 6);
+        console.log('Total amount in wei (with 1% fee):', totalAmountInWei.toString());
 
         // Create ERC20 token contract instance
         const tokenContract = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
@@ -415,14 +424,14 @@ export async function repayLoan(
         onProgress?.("Checking allowance...");
         const currentAllowance = await tokenContract.allowance(userAddress, vaultAddress);
         console.log('Current allowance:', currentAllowance.toString());
-        console.log('Required amount:', amountInWei.toString());
-        console.log('Needs approval:', currentAllowance < amountInWei);
+        console.log('Required amount (net + fee):', totalAmountInWei.toString());
+        console.log('Needs approval:', currentAllowance < totalAmountInWei);
 
-        // Approve vault to spend tokens if needed
-        if (BigInt(currentAllowance.toString()) < BigInt(amountInWei.toString())) {
-            onProgress?.("Step 1/2: Approving token spending...");
-            console.log('Approving vault to spend tokens...');
-            const approveTx = await tokenContract.approve(vaultAddress, amountInWei);
+        // Approve vault to spend tokens if needed (must approve total amount including fee)
+        if (BigInt(currentAllowance.toString()) < BigInt(totalAmountInWei.toString())) {
+            onProgress?.("Step 1/2: Approving token spending (including 1% fee)...");
+            console.log('Approving vault to spend total amount (net + fee)...');
+            const approveTx = await tokenContract.approve(vaultAddress, totalAmountInWei);
             console.log('Approval transaction sent:', approveTx.hash);
 
             onProgress?.("Step 1/2: Confirming approval...");
@@ -437,7 +446,7 @@ export async function repayLoan(
             const newAllowance = await tokenContract.allowance(userAddress, vaultAddress);
             console.log('New allowance after approval:', newAllowance.toString());
 
-            if (BigInt(newAllowance.toString()) < BigInt(amountInWei.toString())) {
+            if (BigInt(newAllowance.toString()) < BigInt(totalAmountInWei.toString())) {
                 throw new Error('Approval failed: insufficient allowance after transaction');
             }
 
@@ -483,9 +492,20 @@ export async function repayLoan(
         onProgress?.("Step 2/2: Repaying loan...");
         console.log('Repaying loan...');
 
+        // IMPORTANT: The vault contract's repay() function expects the NET amount (what vault is owed)
+        // The contract will calculate and pull the 1% fee automatically
+        // So we pass the original 'amount', not 'totalAmount'
+        const netAmountInWei = ethers.parseUnits(amount.toString(), 6);
+
+        console.log('Calling vault.repay() with:', {
+            netAmount: amount,
+            netAmountInWei: netAmountInWei.toString(),
+            note: 'Contract will calculate and pull 1% fee automatically'
+        });
+
         // Use estimateGas to get better error messages
         try {
-            await vaultContract.repay.estimateGas(amountInWei);
+            await vaultContract.repay.estimateGas(netAmountInWei);
         } catch (estimateError: unknown) {
             console.error('Gas estimation failed:', estimateError);
             // Try to extract a meaningful error message
@@ -498,7 +518,7 @@ export async function repayLoan(
             throw new Error(`Repayment validation failed: ${error.message || 'Unknown error'}`);
         }
 
-        const repayTx = await vaultContract.repay(amountInWei);
+        const repayTx = await vaultContract.repay(netAmountInWei);
         console.log('Repayment transaction sent:', repayTx.hash);
 
         onProgress?.("Step 2/2: Confirming repayment...");
