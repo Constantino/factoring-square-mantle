@@ -12,7 +12,8 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
 import { LoanRequestWithVault, LoanStats } from "@/types/loans";
-import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats } from "@/services/loanService";
+import { getLoanRequestsByBorrowerWithVaults, repayLoan, getBorrowerStats, calculateTotalDebt, calculateTotalInterest, calculateTotalCapital } from "@/services/loanService";
+import { formatCurrency } from "@/lib/format";
 
 export default function LoanDashboardPage() {
     const router = useRouter();
@@ -136,11 +137,16 @@ export default function LoanDashboardPage() {
         }
     };
 
+    // Calculate total debt, interest, and capital from all active loans
+    const totalDebt = calculateTotalDebt(loanRequests);
+    const totalInterest = calculateTotalInterest(loanRequests);
+    const totalCapital = calculateTotalCapital(loanRequests);
+
     return (
         <div className="w-full p-8">
             <div className="max-w-7xl mx-auto space-y-6">
                 <div>
-                    <h1 className="text-4xl font-bold mb-4 text-foreground">Loan Dashboard</h1>
+                    <h1 className="text-4xl font-bold mb-4 text-foreground">My Loans</h1>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -178,18 +184,22 @@ export default function LoanDashboardPage() {
                             <div className="space-y-3">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        USDC Balance
+                                        Total Debt
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                        $0.00
+                                        {formatCurrency(totalDebt)}
                                     </div>
-                                </div>
-                                <div className="space-y-2">
                                     <label className="text-xs font-medium text-foreground">
-                                        Debt
+                                        Total Capital
                                     </label>
                                     <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
-                                        $0.00
+                                        {formatCurrency(totalCapital)}
+                                    </div>
+                                    <label className="text-xs font-medium text-foreground">
+                                        Current Interest
+                                    </label>
+                                    <div className="px-3 py-1.5 bg-muted rounded-md text-xs text-foreground">
+                                        {formatCurrency(totalInterest)}
                                     </div>
                                 </div>
                             </div>
