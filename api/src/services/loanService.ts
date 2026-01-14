@@ -48,7 +48,7 @@ export class LoanService {
 
     public async getLoanRequestDetails(loanId: number): Promise<any> {
         const query = `
-            SELECT 
+            SELECT
                 -- Loan Request fields
                 lr.id,
                 lr.created_at,
@@ -66,6 +66,7 @@ export class LoanService {
                 lr.assignment_signed,
                 lr.borrower_address,
                 lr.status,
+                lr.invoice_file_url,
                 
                 -- Aggregated vault data with nested lenders and repayments
                 COALESCE(

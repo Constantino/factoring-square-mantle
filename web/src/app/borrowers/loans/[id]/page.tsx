@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, FileText } from "lucide-react";
 import { LoanRequestDetail } from "@/types/loans";
 import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
 import { getLoanRequestDetail, changeLoanRequestStatus } from "@/services/loanService";
@@ -225,7 +225,20 @@ export default function LoanRequestDetailPage() {
 
                     {/* Loan Overview */}
                     <div>
-                        <h2 className="text-base font-semibold mb-3">Loan Overview</h2>
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-base font-semibold">Loan Overview</h2>
+                            {loanDetail.invoice_file_url && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(loanDetail.invoice_file_url, '_blank')}
+                                    className="flex items-center gap-2"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    View Invoice PDF
+                                </Button>
+                            )}
+                        </div>
                         <div className="grid grid-cols-4 gap-x-8 gap-y-3">
                             <div>
                                 <p className="text-xs text-muted-foreground mb-1">Invoice Number</p>
