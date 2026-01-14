@@ -12,6 +12,7 @@ export interface LoanRequest {
     assignment_signed: boolean;
     not_pledged: boolean;
     borrower_address: string;
+    invoice_file_url?: string;
     created_at: string;
     modified_at: string;
     status: string;
