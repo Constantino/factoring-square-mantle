@@ -94,7 +94,7 @@ export default function LoanDashboardPage() {
         router.push(`/borrowers/loans/${requestId}`);
     };
 
-    const handlePayLoan = async (requestId: number, amount: number, onProgress?: (step: string) => void): Promise<string> => {
+    const handlePayLoan = async (requestId: number, amount: number, originalDebt: number, onProgress?: (step: string) => void): Promise<string> => {
         if (!wallets || wallets.length === 0) {
             throw new Error("No wallet connected. Please connect a wallet first.");
         }
@@ -121,6 +121,7 @@ export default function LoanDashboardPage() {
             const txHash = await repayLoan(
                 loanRequest.vault_address,
                 amount,
+                originalDebt,
                 wallet,
                 loanRequest.id,
                 onProgress

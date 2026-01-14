@@ -34,12 +34,12 @@ export function PayModal({
         onClose();
     };
 
-    // Handle confirm - use totalDebt as the payment amount
+    // Handle confirm - use totalDebt as the payment amount and maxLoan as originalDebt
     const handleConfirm = async () => {
-        if (totalDebt !== undefined && totalDebt > 0) {
+        if (totalDebt !== undefined && totalDebt > 0 && maxLoan !== undefined && maxLoan > 0) {
             setError(null);
             try {
-                await onConfirm(totalDebt);
+                await onConfirm(totalDebt, maxLoan);
             } catch (err) {
                 const errorMessage = err instanceof Error
                     ? err.message.includes('user rejected') || err.message.includes('User denied')
@@ -121,7 +121,7 @@ export function PayModal({
                         </Button>
                         <Button
                             onClick={handleConfirm}
-                            disabled={totalDebt === undefined || totalDebt <= 0 || isProcessing}
+                            disabled={totalDebt === undefined || totalDebt <= 0 || maxLoan === undefined || maxLoan <= 0 || isProcessing}
                         >
                             {isProcessing ? processingStep : "Confirm Payment"}
                         </Button>
