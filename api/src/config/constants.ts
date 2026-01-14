@@ -6,3 +6,7 @@ export const RPC_URL: string = process.env.RPC_URL || '';
 export const PRIVATE_KEY: string = process.env.PRIVATE_KEY || '';
 export const VAULT_FACTORY_ADDRESS: string = process.env.VAULT_FACTORY_ADDRESS || '';
 
+// Supabase S3 Configuration
+export const SUPABASE_BUCKET_ENDPOINT: string = process.env.SUPABASE_BUCKET_ENDPOINT || '';
+export const SUPABASE_BUCKET_ACCESS_KEY_ID: string = process.env.SUPABASE_BUCKET_ACCESS_KEY_ID || '';
+export const SUPABASE_BUCKET_SECRET_ACCESS_KEY: string = process.env.SUPABASE_BUCKET_SECRET_ACCESS_KEY || '';

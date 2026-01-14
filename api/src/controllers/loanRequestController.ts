@@ -7,8 +7,10 @@ import { sanitizeLoanRequestRequest, sanitizeWalletAddress } from '../utils/sani
 import { vaultService } from '../services/vaultService';
 import { loanService } from '../services/loanService';
 import { LoanStatus } from '../types/loanStatus';
+import { uploadFileToSupabase } from '../services/fileUploadService';
+import { MulterRequest } from '../types/multer';
 
-const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> => {
+const saveLoanRequest = async (params: LoanRequestBody & { invoice_file_url?: string | null }): Promise<LoanRequest> => {
     const query = `
         INSERT INTO "LoanRequests" (
             invoice_number,
@@ -23,10 +25,11 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
             not_pledged,
             assignment_signed,
             borrower_address,
+            invoice_file_url,
             created_at,
             modified_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
         RETURNING 
             id,
             created_at,
@@ -42,7 +45,8 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
             max_loan,
             not_pledged,
             assignment_signed,
-            borrower_address
+            borrower_address,
+            invoice_file_url
     `;
 
     const result = await pool.query<LoanRequest>(query, [
@@ -58,6 +62,7 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
         params.not_pledged,
         params.assignment_signed,
         params.borrower_address,
+        params.invoice_file_url || null,
     ]);
 
     return result.rows[0];
@@ -87,6 +92,7 @@ const getLoanRequestsByBorrowerAddressQuery = async (
                 lr.assignment_signed,
                 lr.borrower_address,
                 lr.status,
+                lr.invoice_file_url,
                 v.vault_id,
                 v.vault_address,
                 v.vault_name,
@@ -118,7 +124,8 @@ const getLoanRequestsByBorrowerAddressQuery = async (
                 not_pledged,
                 assignment_signed,
                 borrower_address,
-                status
+                status,
+                invoice_file_url
             FROM "LoanRequests"
             WHERE borrower_address = $1
             ORDER BY created_at DESC
@@ -198,7 +205,8 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
                 not_pledged,
                 assignment_signed,
                 borrower_address,
-                status
+                status,
+                invoice_file_url
             FROM "LoanRequests"
             WHERE id = $1
         `;
@@ -227,6 +235,9 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
 
 export const createLoanRequest = async (req: Request, res: Response): Promise<void> => {
     try {
+        // Cast to MulterRequest to access file property
+        const multerReq = req as MulterRequest;
+
         // Sanitize input data
         const sanitizedData = sanitizeLoanRequestRequest(req.body);
 
@@ -252,6 +263,26 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             borrower_address,
         } = sanitizedData;
 
+        // Handle file upload if present
+        let invoiceFileUrl: string | null = null;
+        if (multerReq.file) {
+            try {
+                const uploadResult = await uploadFileToSupabase(
+                    multerReq.file,
+                    multerReq.file.originalname,
+                    multerReq.file.mimetype
+                );
+                invoiceFileUrl = uploadResult.publicUrl;
+            } catch (uploadError) {
+                console.error('Error uploading invoice file:', uploadError);
+                res.status(500).json({
+                    error: 'Failed to upload invoice file',
+                    details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+                });
+                return;
+            }
+        }
+
         // Insert into database
         const loanRequest = await saveLoanRequest({
             invoice_number,
@@ -266,6 +297,7 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             not_pledged,
             assignment_signed,
             borrower_address,
+            invoice_file_url: invoiceFileUrl,
         });
 
         res.status(201).json({
@@ -504,7 +536,8 @@ export const getAllLoanRequests = async (req: Request, res: Response): Promise<v
                 not_pledged,
                 assignment_signed,
                 borrower_address,
-                status
+                status,
+                invoice_file_url
             FROM "LoanRequests"
             WHERE status = $1
             ORDER BY created_at DESC
@@ -521,6 +554,67 @@ export const getAllLoanRequests = async (req: Request, res: Response): Promise<v
         console.error('Error retrieving loan requests:', error);
         res.status(500).json({
             error: 'Failed to retrieve loan requests',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const uploadFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Check if file exists in request (multer adds file to req)
+        const multerReq = req as MulterRequest;
+
+        if (!multerReq.file) {
+            res.status(400).json({
+                error: 'No file provided. Please upload a file.'
+            });
+            return;
+        }
+
+        const file = multerReq.file;
+
+        const originalFileName = file.originalname || 'uploaded_file';
+        const contentType = file.mimetype || 'application/octet-stream';
+
+        // Validate file type (optional - you can customize this)
+        const allowedMimeTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/jpg',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+
+        if (!allowedMimeTypes.includes(contentType)) {
+            res.status(400).json({
+                error: `File type not allowed. Allowed types: ${allowedMimeTypes.join(', ')}`
+            });
+            return;
+        }
+
+        // Upload file to Supabase
+        const uploadResult = await uploadFileToSupabase(
+            file,
+            originalFileName,
+            contentType
+        );
+
+        res.status(200).json({
+            message: 'File uploaded successfully',
+            data: {
+                fileName: originalFileName,
+                path: uploadResult.path,
+                url: uploadResult.url,
+                publicUrl: uploadResult.publicUrl,
+                contentType: contentType,
+                size: file.size
+            }
+        });
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        res.status(500).json({
+            error: 'Failed to upload file',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

@@ -32,5 +32,6 @@ export interface LoanRequest {
     assignment_signed: boolean;
     borrower_address: string;
     status: LoanStatus;
+    invoice_file_url?: string | null;
 }
 

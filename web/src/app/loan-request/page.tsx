@@ -18,6 +18,7 @@ export default function LoanRequestPage() {
         invoiceDueDate: "",
         customerName: "",
         deliveryCompleted: false,
+        file: null as File | null,
     });
 
     const [confirmations, setConfirmations] = useState({
@@ -52,6 +53,21 @@ export default function LoanRequestPage() {
             ...prev,
             [name]: checked,
         }));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.type === "application/pdf") {
+                setFormData((prev) => ({
+                    ...prev,
+                    file: file,
+                }));
+            } else {
+                setSubmitError("Please upload a PDF file");
+                e.target.value = ""; // Reset the input
+            }
+        }
     };
 
     // Format number as currency
@@ -119,6 +135,13 @@ export default function LoanRequestPage() {
             return;
         }
 
+        // Validate invoice PDF file
+        if (!formData.file) {
+            setSubmitError("Please upload an invoice PDF file");
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
             let apiUrl = process.env.NEXT_PUBLIC_API_URL;
             if (!apiUrl) {
@@ -139,23 +162,27 @@ export default function LoanRequestPage() {
             const monthlyInterestRate = 0.015;
             const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate);
 
-            // Transform form data to API format
-            const submissionData = {
-                invoice_number: formData.invoiceNumber,
-                invoice_amount: invoiceAmountNum,
-                invoice_due_date: formData.invoiceDueDate,
-                term: parseInt(formData.term, 10),
-                customer_name: formData.customerName,
-                delivery_completed: formData.deliveryCompleted,
-                advance_rate: advanceRate,
-                monthly_interest_rate: monthlyInterestRate,
-                max_loan: calculatedMaxLoan,
-                not_pledged: confirmations.notPledged,
-                assignment_signed: confirmations.authorizeAssignment,
-                borrower_address: walletAddress,
-            };
+            // Create FormData for multipart/form-data submission
+            const formDataToSend = new FormData();
+            formDataToSend.append('invoice_number', formData.invoiceNumber);
+            formDataToSend.append('invoice_amount', invoiceAmountNum.toString());
+            formDataToSend.append('invoice_due_date', formData.invoiceDueDate);
+            formDataToSend.append('term', parseInt(formData.term, 10).toString());
+            formDataToSend.append('customer_name', formData.customerName);
+            formDataToSend.append('delivery_completed', formData.deliveryCompleted.toString());
+            formDataToSend.append('advance_rate', advanceRate.toString());
+            formDataToSend.append('monthly_interest_rate', monthlyInterestRate.toString());
+            formDataToSend.append('max_loan', calculatedMaxLoan.toString());
+            formDataToSend.append('not_pledged', confirmations.notPledged.toString());
+            formDataToSend.append('assignment_signed', confirmations.authorizeAssignment.toString());
+            formDataToSend.append('borrower_address', walletAddress);
 
-            const response = await axios.post(`${apiUrl}/loan-requests`, submissionData);
+            // Append file if it exists (field name must be 'file' to match multer config)
+            if (formData.file) {
+                formDataToSend.append('file', formData.file);
+            }
+
+            const response = await axios.post(`${apiUrl}/loan-requests`, formDataToSend);
 
             setSubmitSuccess(true);
             console.log("Loan request submitted successfully:", response.data);
@@ -168,6 +195,7 @@ export default function LoanRequestPage() {
                 invoiceDueDate: "",
                 customerName: "",
                 deliveryCompleted: false,
+                file: null,
             });
             setConfirmations({
                 notPledged: false,
@@ -317,6 +345,36 @@ export default function LoanRequestPage() {
                         </div>
                     </div>
 
+                    {/* Upload Invoice PDF */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Invoice PDF <span className="text-destructive">*</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="invoicePdf"
+                                name="invoicePdf"
+                                type="file"
+                                accept="application/pdf"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                required
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => document.getElementById("invoicePdf")?.click()}
+                            >
+                                Upload Invoice PDF
+                            </Button>
+                            {formData.file && (
+                                <span className="text-sm text-foreground">
+                                    {formData.file.name}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Display Section */}
                     <div className="pt-4 border-t border-border space-y-4">
                         <h2 className="text-lg font-semibold text-foreground">Loan Details</h2>
@@ -441,7 +499,18 @@ export default function LoanRequestPage() {
 
                     {/* Submit Button */}
                     <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isSubmitting || !walletAddress}>
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={
+                                isSubmitting ||
+                                !walletAddress ||
+                                !confirmations.notPledged ||
+                                !confirmations.authorizeAssignment ||
+                                !formData.deliveryCompleted ||
+                                !formData.file
+                            }
+                        >
                             {isSubmitting ? "Submitting..." : "Submit Loan Request"}
                         </Button>
                     </div>
