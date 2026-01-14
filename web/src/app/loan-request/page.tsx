@@ -28,6 +28,7 @@ export default function LoanRequestPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [invoicePdf, setInvoicePdf] = useState<File | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -52,6 +53,18 @@ export default function LoanRequestPage() {
             ...prev,
             [name]: checked,
         }));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.type === "application/pdf") {
+                setInvoicePdf(file);
+            } else {
+                setSubmitError("Please upload a PDF file");
+                e.target.value = ""; // Reset the input
+            }
+        }
     };
 
     // Format number as currency
@@ -173,6 +186,7 @@ export default function LoanRequestPage() {
                 notPledged: false,
                 authorizeAssignment: false,
             });
+            setInvoicePdf(null);
         } catch (error) {
             console.error("Error submitting loan request:", error);
             if (axios.isAxiosError(error)) {
@@ -314,6 +328,35 @@ export default function LoanRequestPage() {
                             <label htmlFor="deliveryCompleted" className="text-sm font-medium text-foreground cursor-pointer">
                                 Delivery completed? (Yes)
                             </label>
+                        </div>
+                    </div>
+
+                    {/* Upload Invoice PDF */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">
+                            Invoice PDF
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="invoicePdf"
+                                name="invoicePdf"
+                                type="file"
+                                accept="application/pdf"
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => document.getElementById("invoicePdf")?.click()}
+                            >
+                                Upload Invoice PDF
+                            </Button>
+                            {invoicePdf && (
+                                <span className="text-sm text-foreground">
+                                    {invoicePdf.name}
+                                </span>
+                            )}
                         </div>
                     </div>
 
