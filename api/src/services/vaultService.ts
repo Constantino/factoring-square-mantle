@@ -5,7 +5,7 @@ import { CreateVaultBody, DeployVaultResult, Vault } from "../models/vault";
 import { CreateVaultLenderBody, VaultLender } from "../models/vaultLender";
 import { VAULTFACTORY_ABI } from "../abi/VaultFactory";
 import { VAULT_ABI } from "../abi/Vault";
-import { validateVaultStatusForDeposit, validateVaultCapacity, validateVaultStatusForRelease, validateVaultCapacityForRelease, validateVaultStatusForRepayment } from "../validators/vaultValidator";
+import { validateVaultStatusForDeposit, validateVaultCapacity, validateVaultStatusForRelease, validateVaultCapacityForRelease, validateVaultStatusForRepayment, validateVaultStatusForRedemption, validateSharesAmount } from "../validators/vaultValidator";
 import { PoolClient } from "pg";
 import { VaultStatus } from "../types/vaultStatus";
 import { LoanStatus } from "../types/loanStatus";
@@ -337,7 +337,7 @@ export class VaultService {
 
             // Step 7.5: Ensure shares_amount is set correctly
             // If frontend didn't send sharesAmount, calculate it from blockchain
-            if (!depositData.sharesAmount || depositData.sharesAmount === '0' || depositData.sharesAmount === 0) {
+            if (validateSharesAmount(depositData.sharesAmount)) {
                 try {
                     console.log('⚠️ No shares_amount provided by frontend, calculating from blockchain...');
                     const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, this.provider);
@@ -691,8 +691,9 @@ export class VaultService {
             const vault = result.rows[0];
 
             // Step 2: Validate vault status (must be REPAID)
-            if (vault.status !== VaultStatus.REPAID) {
-                throw new Error(`Vault must be in REPAID status to track redemption. Current status: ${vault.status}`);
+            const statusError = validateVaultStatusForRedemption(vault.status);
+            if (statusError) {
+                throw new Error(statusError);
             }
 
             // Step 3: If lenderId is provided, update specific VaultLenders record
