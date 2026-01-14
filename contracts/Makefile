@@ -1,4 +1,4 @@
-.PHONY: deploy deploy-mock-usdc deploy-all build test clean generate-all-abis
+.PHONY: deploy deploy-mock-usdc deploy-invoice-nft deploy-all build test clean generate-all-abis
 
 include .env
 export
@@ -14,11 +14,14 @@ deploy-all:
 	@echo "Starting Full Deployment Process"
 	@echo "=========================================="
 	@echo ""
-	@echo "Step 1/2: Deploying Mock USDC..."
+	@echo "Step 1/3: Deploying Mock USDC..."
 	@$(MAKE) deploy-mock-usdc
 	@echo ""
-	@echo "Step 2/2: Deploying VaultFactory..."
+	@echo "Step 2/3: Deploying VaultFactory..."
 	@$(MAKE) deploy
+	@echo ""
+	@echo "Step 3/3: Deploying InvoiceNFT..."
+	@$(MAKE) deploy-invoice-nft
 	@echo ""
 	@echo "=========================================="
 	@echo "✓ Full Deployment Complete!"
@@ -29,6 +32,7 @@ deploy-all:
 	@if [ -f ".env" ]; then \
 		MOCK_USDC=$$(grep USDC_ADDRESS .env | cut -d'=' -f2); \
 		VAULT_FACTORY=$$(grep VAULT_FACTORY_ADDRESS .env | cut -d'=' -f2); \
+		INVOICE_NFT=$$(grep INVOICE_NFT_ADDRESS .env | cut -d'=' -f2); \
 		echo ""; \
 		echo "Mock USDC:"; \
 		echo "  Address: $$MOCK_USDC"; \
@@ -37,6 +41,10 @@ deploy-all:
 		echo "VaultFactory:"; \
 		echo "  Address: $$VAULT_FACTORY"; \
 		echo "  Explorer: https://sepolia.mantlescan.xyz/address/$$VAULT_FACTORY"; \
+		echo ""; \
+		echo "InvoiceNFT:"; \
+		echo "  Address: $$INVOICE_NFT"; \
+		echo "  Explorer: https://sepolia.mantlescan.xyz/address/$$INVOICE_NFT"; \
 		echo ""; \
 	fi
 
@@ -137,11 +145,56 @@ deploy-mock-usdc:
 	fi
 	@rm -f deploy-mock.log
 
+deploy-invoice-nft:
+	@echo "Deploying InvoiceNFT..."
+	@forge script script/DeployInvoiceNFT.s.sol:DeployInvoiceNFT \
+		--rpc-url $(RPC_URL) \
+		--broadcast \
+		--verify \
+		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		--legacy \
+		2>&1 | tee deploy-invoice-nft.log
+	@echo ""
+	@echo "Updating .env files with InvoiceNFT address..."
+	@INVOICE_NFT_ADDRESS=$$(grep "InvoiceNFT Address:" deploy-invoice-nft.log | tail -1 | awk '{print $$3}'); \
+	if [ -n "$$INVOICE_NFT_ADDRESS" ]; then \
+		if grep -q "INVOICE_NFT_ADDRESS=" .env; then \
+			grep -v "INVOICE_NFT_ADDRESS=" .env > .env.tmp && \
+			echo "INVOICE_NFT_ADDRESS=$$INVOICE_NFT_ADDRESS" >> .env.tmp && \
+			mv .env.tmp .env; \
+		else \
+			echo "" >> .env; \
+			echo "INVOICE_NFT_ADDRESS=$$INVOICE_NFT_ADDRESS" >> .env; \
+		fi; \
+		echo "✓ Updated .env with InvoiceNFT address: $$INVOICE_NFT_ADDRESS"; \
+		if [ -f "../api/.env" ]; then \
+			if grep -q "INVOICE_NFT_ADDRESS=" ../api/.env; then \
+				grep -v "INVOICE_NFT_ADDRESS=" ../api/.env > ../api/.env.tmp && \
+				echo "INVOICE_NFT_ADDRESS=$$INVOICE_NFT_ADDRESS" >> ../api/.env.tmp && \
+				mv ../api/.env.tmp ../api/.env; \
+			else \
+				echo "" >> ../api/.env; \
+				echo "INVOICE_NFT_ADDRESS=$$INVOICE_NFT_ADDRESS" >> ../api/.env; \
+			fi; \
+			echo "✓ Updated ../api/.env with InvoiceNFT address: $$INVOICE_NFT_ADDRESS"; \
+		fi; \
+		echo ""; \
+		echo "==========================================";\
+		echo "Deployed Contract:"; \
+		echo "==========================================";\
+		echo ""; \
+		echo "InvoiceNFT:"; \
+		echo "  Address: $$INVOICE_NFT_ADDRESS"; \
+		echo "  Explorer: https://sepolia.mantlescan.xyz/address/$$INVOICE_NFT_ADDRESS"; \
+		echo ""; \
+	fi
+	@rm -f deploy-invoice-nft.log
+
 generate-all-abis:
 	forge build
 	@mkdir -p ../web/src/app/abi
 	@mkdir -p ../api/src/abi
-	@for contract in MockUSDC Vault VaultFactory; do \
+	@for contract in MockUSDC Vault VaultFactory InvoiceNFT; do \
 		file="out/$$contract.sol/$$contract.json"; \
 		if [ -f "$$file" ]; then \
 			contract_name_upper=$$(echo "$$contract" | tr '[:lower:]' '[:upper:]'); \
