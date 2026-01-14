@@ -112,7 +112,7 @@ export class LoanService {
                 ) as vaults,
                 
                 -- Calculated metrics
-                COALESCE(SUM(v.current_capacity::numeric), 0) as total_funded,
+                COALESCE(SUM(v.max_capacity::numeric), 0) as total_funded,
                 COALESCE(
                     (
                         SELECT SUM(vr.amount::numeric)
@@ -140,7 +140,7 @@ export class LoanService {
         // Calculate outstanding balance
         const totalFunded = parseFloat(loanData.total_funded) || 0;
         const totalRepaid = parseFloat(loanData.total_repaid) || 0;
-        const outstandingBalance = totalFunded - totalRepaid;
+        const outstandingBalance = Math.max(0, totalFunded - totalRepaid);
 
         return {
             ...loanData,
