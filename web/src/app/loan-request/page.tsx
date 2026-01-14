@@ -135,6 +135,13 @@ export default function LoanRequestPage() {
             return;
         }
 
+        // Validate invoice PDF file
+        if (!formData.file) {
+            setSubmitError("Please upload an invoice PDF file");
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
             let apiUrl = process.env.NEXT_PUBLIC_API_URL;
             if (!apiUrl) {
@@ -341,7 +348,7 @@ export default function LoanRequestPage() {
                     {/* Upload Invoice PDF */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-foreground">
-                            Invoice PDF
+                            Invoice PDF <span className="text-destructive">*</span>
                         </label>
                         <div className="flex items-center gap-2">
                             <input
@@ -351,6 +358,7 @@ export default function LoanRequestPage() {
                                 accept="application/pdf"
                                 onChange={handleFileChange}
                                 className="hidden"
+                                required
                             />
                             <Button
                                 type="button"
@@ -499,7 +507,8 @@ export default function LoanRequestPage() {
                                 !walletAddress ||
                                 !confirmations.notPledged ||
                                 !confirmations.authorizeAssignment ||
-                                !formData.deliveryCompleted
+                                !formData.deliveryCompleted ||
+                                !formData.file
                             }
                         >
                             {isSubmitting ? "Submitting..." : "Submit Loan Request"}
