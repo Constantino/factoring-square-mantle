@@ -10,7 +10,7 @@ import { LoanStatus } from '../types/loanStatus';
 import { uploadFileToSupabase } from '../services/fileUploadService';
 import { MulterRequest } from '../types/multer';
 
-const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> => {
+const saveLoanRequest = async (params: LoanRequestBody & { invoice_file_url?: string | null }): Promise<LoanRequest> => {
     const query = `
         INSERT INTO "LoanRequests" (
             invoice_number,
@@ -25,10 +25,11 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
             not_pledged,
             assignment_signed,
             borrower_address,
+            invoice_file_url,
             created_at,
             modified_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
         RETURNING 
             id,
             created_at,
@@ -44,7 +45,8 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
             max_loan,
             not_pledged,
             assignment_signed,
-            borrower_address
+            borrower_address,
+            invoice_file_url
     `;
 
     const result = await pool.query<LoanRequest>(query, [
@@ -60,6 +62,7 @@ const saveLoanRequest = async (params: LoanRequestBody): Promise<LoanRequest> =>
         params.not_pledged,
         params.assignment_signed,
         params.borrower_address,
+        params.invoice_file_url || null,
     ]);
 
     return result.rows[0];
@@ -89,6 +92,7 @@ const getLoanRequestsByBorrowerAddressQuery = async (
                 lr.assignment_signed,
                 lr.borrower_address,
                 lr.status,
+                lr.invoice_file_url,
                 v.vault_id,
                 v.vault_address,
                 v.vault_name,
@@ -120,7 +124,8 @@ const getLoanRequestsByBorrowerAddressQuery = async (
                 not_pledged,
                 assignment_signed,
                 borrower_address,
-                status
+                status,
+                invoice_file_url
             FROM "LoanRequests"
             WHERE borrower_address = $1
             ORDER BY created_at DESC
@@ -200,7 +205,8 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
                 not_pledged,
                 assignment_signed,
                 borrower_address,
-                status
+                status,
+                invoice_file_url
             FROM "LoanRequests"
             WHERE id = $1
         `;
@@ -229,6 +235,9 @@ export const getLoanRequestById = async (req: Request, res: Response): Promise<v
 
 export const createLoanRequest = async (req: Request, res: Response): Promise<void> => {
     try {
+        // Cast to MulterRequest to access file property
+        const multerReq = req as MulterRequest;
+
         // Sanitize input data
         const sanitizedData = sanitizeLoanRequestRequest(req.body);
 
@@ -254,6 +263,26 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             borrower_address,
         } = sanitizedData;
 
+        // Handle file upload if present
+        let invoiceFileUrl: string | null = null;
+        if (multerReq.file) {
+            try {
+                const uploadResult = await uploadFileToSupabase(
+                    multerReq.file,
+                    multerReq.file.originalname,
+                    multerReq.file.mimetype
+                );
+                invoiceFileUrl = uploadResult.publicUrl;
+            } catch (uploadError) {
+                console.error('Error uploading invoice file:', uploadError);
+                res.status(500).json({
+                    error: 'Failed to upload invoice file',
+                    details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
+                });
+                return;
+            }
+        }
+
         // Insert into database
         const loanRequest = await saveLoanRequest({
             invoice_number,
@@ -268,6 +297,7 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             not_pledged,
             assignment_signed,
             borrower_address,
+            invoice_file_url: invoiceFileUrl,
         });
 
         res.status(201).json({
@@ -506,7 +536,8 @@ export const getAllLoanRequests = async (req: Request, res: Response): Promise<v
                 not_pledged,
                 assignment_signed,
                 borrower_address,
-                status
+                status,
+                invoice_file_url
             FROM "LoanRequests"
             WHERE status = $1
             ORDER BY created_at DESC
