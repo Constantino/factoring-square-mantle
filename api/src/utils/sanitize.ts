@@ -1,5 +1,6 @@
 import { BorrowerKYBRequestBody } from '../models/borrowerKyb';
 import { LoanRequestBody } from '../models/loanRequest';
+import { GenerateInvoiceMetadataBody } from '../types/nft';
 
 /**
  * Sanitizes a string by trimming, normalizing whitespace, and removing control characters
@@ -136,6 +137,20 @@ export const sanitizeLoanRequestRequest = (data: LoanRequestBody): LoanRequestBo
         not_pledged: sanitizeBoolean(data.not_pledged),
         assignment_signed: sanitizeBoolean(data.assignment_signed),
         borrower_address: sanitizeWalletAddress(data.borrower_address),
+    };
+};
+
+/**
+ * Sanitizes the entire GenerateInvoiceMetadata request body
+ */
+export const sanitizeGenerateInvoiceMetadataRequest = (data: GenerateInvoiceMetadataBody): GenerateInvoiceMetadataBody => {
+    return {
+        name: sanitizeString(data.name, 255),
+        description: sanitizeString(data.description, 2000),
+        image: sanitizeString(data.image, 500), // URL length limit
+        borrowerName: sanitizeString(data.borrowerName, 255),
+        loanRequestId: sanitizeInteger(data.loanRequestId),
+        invoiceNumber: sanitizeString(data.invoiceNumber, 255),
     };
 };
 
