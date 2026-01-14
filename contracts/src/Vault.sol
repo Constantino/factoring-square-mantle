@@ -34,12 +34,7 @@ contract Vault is ERC4626, Ownable {
     /// @param totalPaid The total amount paid by borrower (amount + fee)
     /// @param amountToVault The amount received by the vault
     /// @param feeToTreasury The 1% fee sent to treasury
-    event RepaymentWithFee(
-        address indexed borrower,
-        uint256 totalPaid,
-        uint256 amountToVault,
-        uint256 feeToTreasury
-    );
+    event RepaymentWithFee(address indexed borrower, uint256 totalPaid, uint256 amountToVault, uint256 feeToTreasury);
 
     constructor(
         string memory name,
