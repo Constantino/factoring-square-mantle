@@ -268,17 +268,17 @@ export default function LoanRequestDetailPage() {
 
                     {/* Financial Summary */}
                     <div>
-                        <h2 className="text-base font-semibold mb-3">Financial Summary</h2>
+                        <h2 className="text-base font-semibold mb-3 text-center">Financial Summary</h2>
                         <div className="grid grid-cols-3 gap-8">
-                            <div>
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground mb-1">Total Funded</p>
                                 <p className="text-lg font-bold text-green-600">{formatCurrency(loanDetail.total_funded)}</p>
                             </div>
-                            <div>
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground mb-1">Total Repaid</p>
                                 <p className="text-lg font-bold text-blue-600">{formatCurrency(loanDetail.total_repaid)}</p>
                             </div>
-                            <div>
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground mb-1">Outstanding Balance</p>
                                 <p className="text-lg font-bold text-orange-600">{formatCurrency(loanDetail.outstanding_balance)}</p>
                             </div>
@@ -290,7 +290,7 @@ export default function LoanRequestDetailPage() {
                             {/* Vault Information */}
                             {loanDetail.vaults.map((vault) => (
                                 <div key={vault.vault_id}>
-                                    <h2 className="text-base font-semibold mb-3">Vault Information</h2>
+                                    <h2 className="text-base font-semibold mb-3 text-center">Vault Information</h2>
 
                                     <div className="space-y-2 mb-4">
                                         <div className="flex">
