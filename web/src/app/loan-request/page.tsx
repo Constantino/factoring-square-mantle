@@ -18,6 +18,7 @@ export default function LoanRequestPage() {
         invoiceDueDate: "",
         customerName: "",
         deliveryCompleted: false,
+        file: null as File | null,
     });
 
     const [confirmations, setConfirmations] = useState({
@@ -28,7 +29,6 @@ export default function LoanRequestPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState(false);
-    const [invoicePdf, setInvoicePdf] = useState<File | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -59,7 +59,10 @@ export default function LoanRequestPage() {
         const file = e.target.files?.[0];
         if (file) {
             if (file.type === "application/pdf") {
-                setInvoicePdf(file);
+                setFormData((prev) => ({
+                    ...prev,
+                    file: file,
+                }));
             } else {
                 setSubmitError("Please upload a PDF file");
                 e.target.value = ""; // Reset the input
@@ -152,23 +155,27 @@ export default function LoanRequestPage() {
             const monthlyInterestRate = 0.015;
             const calculatedMaxLoan = Math.min(invoiceAmountNum * advanceRate);
 
-            // Transform form data to API format
-            const submissionData = {
-                invoice_number: formData.invoiceNumber,
-                invoice_amount: invoiceAmountNum,
-                invoice_due_date: formData.invoiceDueDate,
-                term: parseInt(formData.term, 10),
-                customer_name: formData.customerName,
-                delivery_completed: formData.deliveryCompleted,
-                advance_rate: advanceRate,
-                monthly_interest_rate: monthlyInterestRate,
-                max_loan: calculatedMaxLoan,
-                not_pledged: confirmations.notPledged,
-                assignment_signed: confirmations.authorizeAssignment,
-                borrower_address: walletAddress,
-            };
+            // Create FormData for multipart/form-data submission
+            const formDataToSend = new FormData();
+            formDataToSend.append('invoice_number', formData.invoiceNumber);
+            formDataToSend.append('invoice_amount', invoiceAmountNum.toString());
+            formDataToSend.append('invoice_due_date', formData.invoiceDueDate);
+            formDataToSend.append('term', parseInt(formData.term, 10).toString());
+            formDataToSend.append('customer_name', formData.customerName);
+            formDataToSend.append('delivery_completed', formData.deliveryCompleted.toString());
+            formDataToSend.append('advance_rate', advanceRate.toString());
+            formDataToSend.append('monthly_interest_rate', monthlyInterestRate.toString());
+            formDataToSend.append('max_loan', calculatedMaxLoan.toString());
+            formDataToSend.append('not_pledged', confirmations.notPledged.toString());
+            formDataToSend.append('assignment_signed', confirmations.authorizeAssignment.toString());
+            formDataToSend.append('borrower_address', walletAddress);
 
-            const response = await axios.post(`${apiUrl}/loan-requests`, submissionData);
+            // Append file if it exists (field name must be 'file' to match multer config)
+            if (formData.file) {
+                formDataToSend.append('file', formData.file);
+            }
+
+            const response = await axios.post(`${apiUrl}/loan-requests`, formDataToSend);
 
             setSubmitSuccess(true);
             console.log("Loan request submitted successfully:", response.data);
@@ -181,12 +188,12 @@ export default function LoanRequestPage() {
                 invoiceDueDate: "",
                 customerName: "",
                 deliveryCompleted: false,
+                file: null,
             });
             setConfirmations({
                 notPledged: false,
                 authorizeAssignment: false,
             });
-            setInvoicePdf(null);
         } catch (error) {
             console.error("Error submitting loan request:", error);
             if (axios.isAxiosError(error)) {
@@ -352,9 +359,9 @@ export default function LoanRequestPage() {
                             >
                                 Upload Invoice PDF
                             </Button>
-                            {invoicePdf && (
+                            {formData.file && (
                                 <span className="text-sm text-foreground">
-                                    {invoicePdf.name}
+                                    {formData.file.name}
                                 </span>
                             )}
                         </div>
