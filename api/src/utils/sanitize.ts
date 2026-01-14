@@ -106,6 +106,16 @@ export const sanitizeBoolean = (value: unknown): boolean => {
 };
 
 /**
+ * Sanitizes a string for use in filenames (removes special characters, spaces, etc.)
+ */
+export const sanitizeForFilename = (value: string): string => {
+    if (typeof value !== 'string') {
+        return 'unknown';
+    }
+    return value.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
+};
+
+/**
  * Sanitizes the entire BorrowerKYB request body
  */
 export const sanitizeBorrowerKYBRequest = (data: BorrowerKYBRequestBody): BorrowerKYBRequestBody => {
@@ -147,7 +157,6 @@ export const sanitizeGenerateInvoiceMetadataRequest = (data: GenerateInvoiceMeta
     return {
         name: sanitizeString(data.name, 255),
         description: sanitizeString(data.description, 2000),
-        image: sanitizeString(data.image, 500), // URL length limit
         borrowerName: sanitizeString(data.borrowerName, 255),
         loanRequestId: sanitizeInteger(data.loanRequestId),
         invoiceNumber: sanitizeString(data.invoiceNumber, 255),

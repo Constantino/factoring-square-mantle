@@ -14,21 +14,6 @@ export const validateDescription = (description: unknown): string | null => {
     return null;
 };
 
-export const validateImageUrl = (image: unknown): string | null => {
-    if (!image || typeof image !== 'string' || image.trim().length === 0) {
-        return 'Image URL is required and must be a non-empty string';
-    }
-
-    // Validate URL format
-    try {
-        new URL(image);
-    } catch {
-        return 'Image must be a valid URL';
-    }
-
-    return null;
-};
-
 export const validateBorrowerName = (borrowerName: unknown): string | null => {
     if (!borrowerName || typeof borrowerName !== 'string' || borrowerName.trim().length === 0) {
         return 'Borrower name is required and must be a non-empty string';
@@ -64,11 +49,6 @@ export const validateRequest = (data: GenerateInvoiceMetadataBodyForValidation):
     const descriptionError = validateDescription(data.description);
     if (descriptionError) {
         return descriptionError;
-    }
-
-    const imageError = validateImageUrl(data.image);
-    if (imageError) {
-        return imageError;
     }
 
     const borrowerNameError = validateBorrowerName(data.borrowerName);
