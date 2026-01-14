@@ -15,6 +15,29 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Formats currency with precision for small amounts
+ * Shows up to 6 decimal places for amounts under $1, otherwise 2 decimals
+ * @param amount - The amount to format
+ * @returns Formatted currency string with appropriate precision
+ */
+export function formatCurrencyPrecise(amount: number): string {
+    const absAmount = Math.abs(amount);
+    
+    // For amounts under $1, show up to 6 decimals (removing trailing zeros)
+    if (absAmount < 1 && absAmount > 0) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 6,
+        }).format(amount);
+    }
+    
+    // For larger amounts or zero, use standard 2 decimals
+    return formatCurrency(amount);
+}
+
+/**
  * Formats a date string to a readable format
  * @param dateString - ISO date string
  * @returns Formatted date string (e.g., "Jan 15, 2024")

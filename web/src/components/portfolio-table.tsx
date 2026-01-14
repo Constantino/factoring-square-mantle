@@ -9,7 +9,7 @@ interface PortfolioTableProps {
     portfolio: LenderPortfolio[];
     isLoading: boolean;
     error: string | null;
-    onRedeem?: (vaultAddress: string, investedAmount: number) => void;
+    onRedeem?: (vaultAddress: string, investedAmount: number, lenderId: number, sharesAmount?: string) => void;
 }
 
 export function PortfolioTable({
@@ -126,15 +126,21 @@ export function PortfolioTable({
                                             </a>
                                         </td>
                                         <td className="py-3 px-4 text-xs">
-                                            {item.status === 'REPAID' && onRedeem ? (
+                                            {/* Show redeem button only if vault is REPAID and this deposit is FUNDED */}
+                                            {item.status === 'REPAID' && item.lender_status === 'FUNDED' && onRedeem ? (
                                                 <Button
                                                     size="sm"
-                                                    onClick={() => onRedeem(item.vault_address, parseFloat(item.amount))}
+                                                    onClick={() => onRedeem(
+                                                        item.vault_address, 
+                                                        parseFloat(item.amount), 
+                                                        item.lender_id,
+                                                        item.shares_amount
+                                                    )}
                                                     className="h-7 px-3 text-xs"
                                                 >
                                                     Redeem
                                                 </Button>
-                                            ) : item.status === 'REDEEMED' ? (
+                                            ) : item.lender_status === 'REDEEMED' ? (
                                                 <span className="text-xs text-muted-foreground">Completed</span>
                                             ) : null}
                                         </td>

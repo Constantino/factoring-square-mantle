@@ -18,11 +18,17 @@ export default function LenderLoansPage() {
     
     // Redeem modal state
     const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
-    const [selectedVault, setSelectedVault] = useState<{ address: string; amount: number } | null>(null);
+    const [selectedVault, setSelectedVault] = useState<{ 
+        address: string; 
+        amount: number; 
+        lenderId: number;
+        sharesAmount?: string;
+    } | null>(null);
     const [isRedeeming, setIsRedeeming] = useState(false);
     const [redeemStep, setRedeemStep] = useState<string>("Processing...");
     const [redeemTxHash, setRedeemTxHash] = useState<string | null>(null);
     const [redeemableAmount, setRedeemableAmount] = useState<number | undefined>(undefined);
+    const [sharesToRedeem, setSharesToRedeem] = useState<bigint | undefined>(undefined);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
     useEffect(() => {
@@ -59,8 +65,13 @@ export default function LenderLoansPage() {
         }
     };
 
-    const handleRedeem = async (vaultAddress: string, investedAmount: number) => {
-        setSelectedVault({ address: vaultAddress, amount: investedAmount });
+    const handleRedeem = async (
+        vaultAddress: string, 
+        investedAmount: number, 
+        lenderId: number,
+        sharesAmount?: string
+    ) => {
+        setSelectedVault({ address: vaultAddress, amount: investedAmount, lenderId, sharesAmount });
         setRedeemableAmount(undefined);
         setIsRedeemModalOpen(true);
         setRedeemTxHash(null);
@@ -79,8 +90,9 @@ export default function LenderLoansPage() {
 
         try {
             setIsLoadingPreview(true);
-            const previewAmount = await previewRedemption(vaultAddress, wallet);
-            setRedeemableAmount(previewAmount);
+            const preview = await previewRedemption(vaultAddress, investedAmount, sharesAmount, wallet);
+            setRedeemableAmount(preview.redeemableAmount);
+            setSharesToRedeem(preview.sharesToRedeem);
         } catch (error) {
             console.error("Error previewing redemption:", error);
             // Don't block modal opening if preview fails
@@ -94,6 +106,10 @@ export default function LenderLoansPage() {
             throw new Error("No wallet connected");
         }
 
+        if (!sharesToRedeem) {
+            throw new Error("Shares amount not calculated. Please try again.");
+        }
+
         const wallet = wallets[0];
         if (!wallet) {
             throw new Error("Wallet not available");
@@ -105,6 +121,8 @@ export default function LenderLoansPage() {
 
             const result = await redeemShares(
                 selectedVault.address,
+                sharesToRedeem,
+                selectedVault.lenderId,
                 wallet,
                 (step: string) => setRedeemStep(step)
             );
@@ -137,6 +155,7 @@ export default function LenderLoansPage() {
             setSelectedVault(null);
             setRedeemTxHash(null);
             setRedeemableAmount(undefined);
+            setSharesToRedeem(undefined);
         }
     };
 

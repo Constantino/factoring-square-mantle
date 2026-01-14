@@ -196,9 +196,11 @@ export class VaultService {
                 lender_address,
                 amount,
                 tx_hash,
+                status,
+                shares_amount,
                 created_at
             )
-            VALUES ($1, $2, $3, $4, NOW())
+            VALUES ($1, $2, $3, $4, 'FUNDED', $5, NOW())
             RETURNING *
         `;
 
@@ -206,7 +208,8 @@ export class VaultService {
             vaultId,
             depositData.lenderAddress,
             depositData.amount,
-            depositData.txHash
+            depositData.txHash,
+            depositData.sharesAmount || null
         ]);
 
         return result.rows[0];
@@ -332,6 +335,37 @@ export class VaultService {
             // Step 7: Commit transaction before blockchain interaction
             await client.query('COMMIT');
 
+            // Step 7.5: Ensure shares_amount is set correctly
+            // If frontend didn't send sharesAmount, calculate it from blockchain
+            if (!depositData.sharesAmount || depositData.sharesAmount === '0' || depositData.sharesAmount === 0) {
+                try {
+                    console.log('⚠️ No shares_amount provided by frontend, calculating from blockchain...');
+                    const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, this.provider);
+                    
+                    // CRITICAL: Use previewDeposit to get shares for THIS SPECIFIC deposit amount
+                    // NOT total balance (which would be wrong for split deposits)
+                    const depositInWei = ethers.parseUnits(depositData.amount.toString(), 6);
+                    const expectedShares = await vaultContract.previewDeposit(depositInWei);
+                    const shareBalanceStr = ethers.formatUnits(expectedShares, 18);
+                    
+                    console.log(`Calculated shares for deposit ${depositData.amount} USDC: ${shareBalanceStr}`);
+                    
+                    // Update VaultLenders record with calculated shares as string
+                    const updateSharesQuery = `
+                        UPDATE "VaultLenders"
+                        SET shares_amount = $1
+                        WHERE lender_id = $2
+                    `;
+                    await pool.query(updateSharesQuery, [shareBalanceStr, lender.lender_id]);
+                    console.log(`✅ Updated VaultLenders record ${lender.lender_id} with shares_amount: ${shareBalanceStr}`);
+                } catch (sharesError) {
+                    console.error('❌ Error calculating/updating shares:', sharesError);
+                    // Don't fail the entire deposit if shares update fails
+                }
+            } else {
+                console.log(`✅ Using shares_amount from frontend: ${depositData.sharesAmount}`);
+            }
+
             // Step 8: If vault appears to be fully funded, verify with smart contract before releasing
             let fundReleased = false;
             let releaseTxHash: string | undefined;
@@ -405,6 +439,11 @@ export class VaultService {
                 vl.amount,
                 vl.tx_hash,
                 vl.created_at,
+                vl.status as lender_status,
+                vl.shares_amount,
+                vl.redeemed_amount,
+                vl.redemption_tx_hash,
+                vl.redeemed_at,
                 v.vault_id,
                 v.vault_address,
                 v.vault_name,
@@ -634,7 +673,7 @@ export class VaultService {
 
     async trackRedemption(
         vaultAddress: string,
-        redemptionData: { lenderAddress: string; amount: number; txHash: string }
+        redemptionData: { lenderAddress: string; lenderId?: number; sharesRedeemed?: number; amount: number; txHash: string }
     ): Promise<{ vault: Vault; message: string }> {
         try {
             // Step 1: Get vault data
@@ -656,7 +695,32 @@ export class VaultService {
                 throw new Error(`Vault must be in REPAID status to track redemption. Current status: ${vault.status}`);
             }
 
-            // Step 3: Read share balance from smart contract to verify redemption
+            // Step 3: If lenderId is provided, update specific VaultLenders record
+            if (redemptionData.lenderId) {
+                console.log(`📝 Updating VaultLenders record ${redemptionData.lenderId} to REDEEMED status...`);
+                
+                const updateLenderQuery = `
+                    UPDATE "VaultLenders"
+                    SET status = 'REDEEMED',
+                        redeemed_amount = $1,
+                        shares_amount = $2,
+                        redemption_tx_hash = $3,
+                        redeemed_at = NOW()
+                    WHERE lender_id = $4 AND vault_id = $5
+                `;
+                
+                await pool.query(updateLenderQuery, [
+                    redemptionData.amount,
+                    redemptionData.sharesRedeemed || null,
+                    redemptionData.txHash,
+                    redemptionData.lenderId,
+                    vault.vault_id
+                ]);
+                
+                console.log(`✅ VaultLenders record ${redemptionData.lenderId} updated successfully`);
+            }
+
+            // Step 4: Read share balance from smart contract to verify redemption
             console.log(`📖 Verifying redemption from smart contract: ${vaultAddress}`);
             const vaultContract = new ethers.Contract(
                 vaultAddress,
@@ -665,10 +729,10 @@ export class VaultService {
             );
 
             const shareBalance = await vaultContract.balanceOf(redemptionData.lenderAddress);
-            console.log(`📊 Lender ${redemptionData.lenderAddress} share balance: ${shareBalance.toString()}`);
+            console.log(`📊 Lender ${redemptionData.lenderAddress} share balance after redemption: ${shareBalance.toString()}`);
 
-            // Step 4: Check if all lenders have redeemed their shares
-            // Get all lenders for this vault
+            // Step 5: Check if all lenders have redeemed their shares
+            // Get all unique lenders for this vault
             const lendersQuery = `
                 SELECT DISTINCT lender_address
                 FROM "VaultLenders"
@@ -690,7 +754,7 @@ export class VaultService {
 
             console.log(`📊 All lenders redeemed: ${allRedeemed}`);
 
-            // Step 5: Update vault status if all shares have been redeemed
+            // Step 6: Update vault status if all shares have been redeemed
             let updatedVault: Vault;
 
             if (allRedeemed) {

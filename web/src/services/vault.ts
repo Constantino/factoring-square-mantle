@@ -155,6 +155,12 @@ export async function participateInVault(
         // Create vault contract instance
         const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
 
+        // Preview shares to be received (ERC4626 standard function)
+        onProgress?.("Calculating shares...");
+        const expectedShares = await vaultContract.previewDeposit(amountInWei);
+        const expectedSharesStr = ethers.formatUnits(expectedShares, 18);
+        console.log('Expected shares for deposit:', expectedSharesStr);
+
         // Deposit into vault
         onProgress?.("Step 2/2: Depositing into vault...");
         console.log('Depositing into vault...');
@@ -165,6 +171,9 @@ export async function participateInVault(
         // Wait for deposit transaction to be mined
         const receipt = await depositTx.wait();
         console.log('Deposit confirmed in block:', receipt.blockNumber);
+
+        // Use the previewed shares amount (most accurate)
+        console.log('Shares received from this deposit:', expectedSharesStr);
 
         onProgress?.("✅ Deposit successful!");
         
@@ -179,6 +188,7 @@ export async function participateInVault(
                 {
                     lenderAddress: userAddress,
                     amount: amount,
+                    sharesAmount: expectedSharesStr,
                     txHash: depositTx.hash
                 }
             );
@@ -272,12 +282,16 @@ export async function fetchLenderPortfolio(lenderAddress: string): Promise<Lende
 /**
  * Redeem shares from a vault to receive USDC back
  * @param vaultAddress - The address of the vault contract
+ * @param sharesToRedeem - Specific shares to redeem (for partial redemption)
+ * @param lenderId - The VaultLenders record ID for tracking
  * @param wallet - The Privy wallet object
  * @param onProgress - Optional callback to report progress
  * @returns Promise with transaction hash and redeemed amount
  */
 export async function redeemShares(
     vaultAddress: string,
+    sharesToRedeem: bigint,
+    lenderId: number,
     wallet: PrivyWallet,
     onProgress?: (step: string) => void
 ): Promise<{ txHash: string; redeemedAmount: number }> {
@@ -355,23 +369,28 @@ export async function redeemShares(
         // Get user's share balance
         onProgress?.("Checking your shares...");
         const shareBalance = await vaultContract.balanceOf(userAddress);
-        console.log('User share balance:', shareBalance.toString());
+        console.log('User total share balance:', shareBalance.toString());
+        console.log('Shares to redeem for this deposit:', sharesToRedeem.toString());
 
         if (shareBalance === BigInt(0)) {
             throw new Error('You have no shares to redeem in this vault');
         }
 
-        // Preview how much USDC will be received
+        if (shareBalance < sharesToRedeem) {
+            throw new Error(`Insufficient shares. Have ${shareBalance.toString()}, need ${sharesToRedeem.toString()}`);
+        }
+
+        // Preview how much USDC will be received for these specific shares
         onProgress?.("Calculating redemption amount...");
-        const previewAssets = await vaultContract.previewRedeem(shareBalance);
+        const previewAssets = await vaultContract.previewRedeem(sharesToRedeem);
         const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
         console.log('Will receive USDC:', redeemedAmountUsdc);
 
-        // Redeem all shares
+        // Redeem specific shares
         onProgress?.("Redeeming shares...");
-        console.log('Redeeming shares...');
+        console.log(`Redeeming ${sharesToRedeem.toString()} shares...`);
         
-        const redeemTx = await vaultContract.redeem(shareBalance, userAddress, userAddress);
+        const redeemTx = await vaultContract.redeem(sharesToRedeem, userAddress, userAddress);
         console.log('Redemption transaction sent:', redeemTx.hash);
 
         onProgress?.("Confirming redemption...");
@@ -391,6 +410,8 @@ export async function redeemShares(
                 `${fullUrl}/vaults/${vaultAddress}/redemptions`,
                 {
                     lenderAddress: userAddress,
+                    lenderId: lenderId,
+                    sharesRedeemed: ethers.formatUnits(sharesToRedeem, 18),
                     amount: redeemedAmountUsdc,
                     txHash: redeemTx.hash
                 }
@@ -413,15 +434,19 @@ export async function redeemShares(
 }
 
 /**
- * Preview how much USDC will be received when redeeming shares
+ * Preview how much USDC will be received when redeeming shares for a specific deposit
  * @param vaultAddress - The address of the vault contract
+ * @param depositAmount - The original deposit amount in USDC
+ * @param storedShares - The shares amount stored from original deposit (if available)
  * @param wallet - The Privy wallet object
- * @returns Promise with the redeemable amount in USDC
+ * @returns Promise with the redeemable amount in USDC and shares to redeem
  */
 export async function previewRedemption(
     vaultAddress: string,
+    depositAmount: number,
+    storedShares: string | number | undefined,
     wallet: PrivyWallet
-): Promise<number> {
+): Promise<{ redeemableAmount: number; sharesToRedeem: bigint }> {
     try {
         // Get the Ethereum provider from Privy wallet
         const provider = await wallet.getEthereumProvider();
@@ -433,18 +458,40 @@ export async function previewRedemption(
         // Create vault contract instance
         const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
 
-        // Get user's share balance
-        const shareBalance = await vaultContract.balanceOf(userAddress);
+        let sharesToRedeem: bigint;
 
-        if (shareBalance === BigInt(0)) {
-            return 0;
+        if (storedShares && (typeof storedShares === 'string' ? storedShares !== '0' : storedShares > 0)) {
+            // Use stored shares from deposit time (most accurate)
+            sharesToRedeem = ethers.parseUnits(storedShares.toString(), 18);
+            console.log(`Using stored shares from deposit: ${storedShares}`);
+        } else {
+            // Fallback: Convert deposit amount to shares using current rate
+            // This is less accurate if share price has changed
+            console.warn('No stored shares found, calculating from deposit amount (may be inaccurate)');
+            const depositInWei = ethers.parseUnits(depositAmount.toString(), 6);
+            sharesToRedeem = await vaultContract.convertToShares(depositInWei);
+        }
+        
+        console.log(`Preview for deposit ${depositAmount} USDC:`);
+        console.log(`- Shares to redeem: ${sharesToRedeem.toString()}`);
+
+        if (sharesToRedeem === BigInt(0)) {
+            return { redeemableAmount: 0, sharesToRedeem: BigInt(0) };
         }
 
-        // Preview how much USDC will be received
-        const previewAssets = await vaultContract.previewRedeem(shareBalance);
-        const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
+        // Verify user has enough shares
+        const userShares = await vaultContract.balanceOf(userAddress);
+        if (userShares < sharesToRedeem) {
+            throw new Error(`Insufficient shares. Have ${userShares.toString()}, need ${sharesToRedeem.toString()}`);
+        }
 
-        return redeemedAmountUsdc;
+        // Preview how much USDC will be received for these specific shares
+        const previewAssets = await vaultContract.previewRedeem(sharesToRedeem);
+        const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
+        
+        console.log(`- Will receive: ${redeemedAmountUsdc} USDC`);
+
+        return { redeemableAmount: redeemedAmountUsdc, sharesToRedeem };
     } catch (error) {
         console.error("Error previewing redemption:", error);
         throw error;
