@@ -10,14 +10,8 @@ contract DeployInvoiceNFT is Script {
         address deployer = vm.addr(deployerPrivateKey);
 
         // Get deployment parameters from environment or use defaults
-        string memory name = vm.envOr(
-            "INVOICE_NFT_NAME",
-            string("Invoice NFT")
-        );
-        string memory symbol = vm.envOr(
-            "INVOICE_NFT_SYMBOL",
-            string("INVOICE")
-        );
+        string memory name = vm.envOr("INVOICE_NFT_NAME", string("Invoice NFT"));
+        string memory symbol = vm.envOr("INVOICE_NFT_SYMBOL", string("INVOICE"));
         address initialOwner = vm.envOr("INVOICE_NFT_OWNER", deployer);
 
         console.log("=== InvoiceNFT Deployment Starting ===");
@@ -30,14 +24,8 @@ contract DeployInvoiceNFT is Script {
 
         // Deploy InvoiceNFT
         InvoiceNFT invoiceNFT = new InvoiceNFT(name, symbol, initialOwner);
-        require(
-            address(invoiceNFT) != address(0),
-            "InvoiceNFT deployment failed"
-        );
-        require(
-            invoiceNFT.owner() == initialOwner,
-            "InvoiceNFT owner mismatch"
-        );
+        require(address(invoiceNFT) != address(0), "InvoiceNFT deployment failed");
+        require(invoiceNFT.owner() == initialOwner, "InvoiceNFT owner mismatch");
 
         // Verify initial state
         uint256 nextTokenId = invoiceNFT.nextTokenId();

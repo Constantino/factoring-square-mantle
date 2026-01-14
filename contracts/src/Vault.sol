@@ -19,6 +19,7 @@ contract Vault is ERC4626, Ownable {
         ACTIVE,
         REPAID
     }
+
     State public state;
 
     constructor(
