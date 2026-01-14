@@ -8,6 +8,7 @@ import { PayModal } from "@/components/pay-modal";
 import { LoansTableProps, LoanRequestWithVault, LoanRequestStatus } from "@/types/loans";
 import { formatCurrency, formatDate, formatPercentage, getStatusBadgeClass, formatStatus, truncateAddress } from "@/lib/format";
 import { getTotalDebt } from "@/services/loanService";
+import { useRoleStore } from "@/stores/roleStore";
 
 export function LoansTable({
     loanRequests,
@@ -15,12 +16,16 @@ export function LoansTable({
     error,
     onView,
     onPay,
+    title = "Loans",
 }: LoansTableProps) {
+    const { currentRole } = useRoleStore();
     const [payModalOpen, setPayModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<LoanRequestWithVault | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [txHash, setTxHash] = useState<string | null>(null);
     const [processingStep, setProcessingStep] = useState<string>("Processing payment...");
+
+    const isAdmin = currentRole === 'Admin';
 
     const openPayModal = (request: LoanRequestWithVault) => {
         setSelectedRequest(request);
@@ -70,7 +75,7 @@ export function LoansTable({
             whileHover={undefined}
         >
             <CardHeader>
-                <CardTitle className="text-base">Loans</CardTitle>
+                <CardTitle className="text-base">{title}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -186,15 +191,17 @@ export function LoansTable({
                                                 >
                                                     View
                                                 </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-xs"
-                                                    onClick={() => openPayModal(request)}
-                                                    disabled={request.status !== LoanRequestStatus.ACTIVE}
-                                                >
-                                                    Pay
-                                                </Button>
+                                                {!isAdmin && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-xs"
+                                                        onClick={() => openPayModal(request)}
+                                                        disabled={request.status !== LoanRequestStatus.ACTIVE}
+                                                    >
+                                                        Pay
+                                                    </Button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

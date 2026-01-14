@@ -6,16 +6,23 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { LoanRequestDetail } from "@/types/loans";
-import { getLoanRequestDetail } from "@/services/loanService";
+import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
+import { getLoanRequestDetail, changeLoanRequestStatus } from "@/services/loanService";
+import { useRoleStore } from "@/stores/roleStore";
+import { ApproveModal } from "@/components/approve-modal";
+import { getApiUrl } from "@/lib/api";
 
 export default function LoanRequestDetailPage() {
     const params = useParams();
     const router = useRouter();
     const loanId = params.id as string;
-    
+    const { currentRole } = useRoleStore();
+
     const [loanDetail, setLoanDetail] = useState<LoanRequestDetail | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isChangingStatus, setIsChangingStatus] = useState(false);
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
 
     useEffect(() => {
         if (loanId) {
@@ -79,6 +86,74 @@ export default function LoanRequestDetailPage() {
         return colors[status] || "bg-gray-100 text-gray-800";
     };
 
+    const handleApprove = async () => {
+        if (!loanDetail) return;
+        setIsApproveModalOpen(true);
+    };
+
+    const handleApproveConfirm = async () => {
+        if (!loanDetail) return;
+
+        try {
+            setIsChangingStatus(true);
+            setError(null);
+
+            const apiUrl = getApiUrl();
+            const response = await axios.post(
+                `${apiUrl}/loan-requests/${loanDetail.id}/approve`
+            );
+
+            // Close modal on success
+            setIsApproveModalOpen(false);
+
+            // Refresh loan details after approval
+            await fetchLoanDetail();
+        } catch (err) {
+            console.error("Error approving loan:", err);
+            if (axios.isAxiosError(err)) {
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Failed to approve loan request"
+                );
+            } else {
+                setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            }
+        } finally {
+            setIsChangingStatus(false);
+        }
+    };
+
+    const handleApproveModalClose = () => {
+        setIsApproveModalOpen(false);
+    };
+
+    const handleReject = async () => {
+        if (!loanDetail) return;
+
+        try {
+            setIsChangingStatus(true);
+            await changeLoanRequestStatus(loanDetail.id, LoanRequestStatus.REJECTED);
+            // Refresh loan details after status change
+            await fetchLoanDetail();
+        } catch (err) {
+            console.error("Error rejecting loan:", err);
+            if (axios.isAxiosError(err)) {
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Failed to reject loan"
+                );
+            } else {
+                setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            }
+        } finally {
+            setIsChangingStatus(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="w-full p-6">
@@ -117,7 +192,7 @@ export default function LoanRequestDetailPage() {
                 <div className="flex items-center justify-between mb-6">
                     <Button variant="ghost" size="sm" onClick={() => router.back()}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Loans
+                        Back
                     </Button>
                     <h1 className="text-2xl font-bold absolute left-1/2 transform -translate-x-1/2">Loan Request Details</h1>
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(loanDetail.status)}`}>
@@ -127,7 +202,27 @@ export default function LoanRequestDetailPage() {
 
                 {/* Main Content Container */}
                 <div className="bg-card rounded-lg border p-6 space-y-6">
-                    
+                    {/* Admin Action Buttons */}
+                    {currentRole === 'Admin' && loanDetail.status === LoanRequestStatus.REQUESTED && (
+                        <div className="flex gap-3 justify-end">
+                            <Button
+                                variant="default"
+                                onClick={handleApprove}
+                                disabled={isChangingStatus}
+                                className="bg-green-600 hover:bg-green-700"
+                            >
+                                APPROVE
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleReject}
+                                disabled={isChangingStatus}
+                            >
+                                REJECT
+                            </Button>
+                        </div>
+                    )}
+
                     {/* Loan Overview */}
                     <div>
                         <h2 className="text-base font-semibold mb-3">Loan Overview</h2>
@@ -196,7 +291,7 @@ export default function LoanRequestDetailPage() {
                             {loanDetail.vaults.map((vault) => (
                                 <div key={vault.vault_id}>
                                     <h2 className="text-base font-semibold mb-3">Vault Information</h2>
-                                    
+
                                     <div className="space-y-2 mb-4">
                                         <div className="flex">
                                             <p className="text-xs text-muted-foreground w-48">Vault Address</p>
@@ -350,6 +445,14 @@ export default function LoanRequestDetailPage() {
                         </>
                     )}
                 </div>
+
+                {/* Approve Modal */}
+                <ApproveModal
+                    isOpen={isApproveModalOpen}
+                    onClose={handleApproveModalClose}
+                    onConfirm={handleApproveConfirm}
+                    isChangingStatus={isChangingStatus}
+                />
             </div>
         </div>
     );

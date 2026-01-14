@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import {
     Sidebar,
     SidebarContent,
@@ -11,9 +12,12 @@ import {
     SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon } from "lucide-react"
+import { Users, ChevronLeft, ChevronRight, Building2, Receipt, Vault, CreditCard, Wallet, LucideIcon, LayoutDashboard } from "lucide-react"
 import Link from "next/link"
 import { useRoleStore, UserRole } from "@/stores/roleStore"
+import { useRequestedCountStore } from "@/stores/requestedCountStore"
+import { NotificationBadge } from "@/components/notification-badge"
+import { countRequestedLoanRequests } from "@/services/loanService"
 
 interface MenuItem {
     title: string;
@@ -25,12 +29,36 @@ interface MenuItem {
 export function AppSidebar() {
     const { currentRole } = useRoleStore()
     const { state } = useSidebar()
+    const { requestedCount, setRequestedCount } = useRequestedCountStore()
+
+    useEffect(() => {
+        const fetchRequestedCount = async () => {
+            try {
+                const count = await countRequestedLoanRequests()
+                setRequestedCount(count)
+            } catch (error) {
+                console.error("Error fetching requested loan count:", error)
+                // Keep count at 0 on error
+            }
+        }
+
+        // Only fetch if user is Admin (since only Admin sees the badge)
+        if (currentRole === 'Admin') {
+            fetchRequestedCount()
+        }
+    }, [currentRole, setRequestedCount])
 
     const allMenuItems: MenuItem[] = [
         {
             title: "Users",
             url: "/users",
             icon: Users,
+            roles: ['Admin'],
+        },
+        {
+            title: "Admin panel",
+            url: "/admin",
+            icon: LayoutDashboard,
             roles: ['Admin'],
         },
         {
@@ -76,10 +104,13 @@ export function AppSidebar() {
                         <SidebarMenu>
                             {menuItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild>
+                                    <SidebarMenuButton asChild className="relative">
                                         <Link href={item.url}>
                                             <item.icon />
                                             <span>{item.title}</span>
+                                            {item.title === "Admin panel" && requestedCount > 0 && (
+                                                <NotificationBadge count={requestedCount} />
+                                            )}
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>

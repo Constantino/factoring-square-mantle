@@ -43,18 +43,22 @@ export function formatPercentage(rate: number): string {
  */
 export function getStatusBadgeClass(status: string): string {
     switch (status) {
-    case LoanRequestStatus.LISTED:
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    case LoanRequestStatus.ACTIVE:
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-    case LoanRequestStatus.PAID:
-        return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200";
-    case LoanRequestStatus.CANCELED:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    case LoanRequestStatus.DEFAULTED:
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-    default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+        case LoanRequestStatus.LISTED:
+            return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+        case LoanRequestStatus.ACTIVE:
+            return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+        case LoanRequestStatus.PAID:
+            return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200";
+        case LoanRequestStatus.REJECTED:
+            return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+        case LoanRequestStatus.CANCELED:
+            return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+        case LoanRequestStatus.DEFAULTED:
+            return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+        case LoanRequestStatus.REQUESTED:
+            return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+        default:
+            return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
 }
 

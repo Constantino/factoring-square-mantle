@@ -2,10 +2,44 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { getApiUrl } from "@/lib/api";
 import { LoanRequest, LoanRequestWithVault, LoanStats, LoanRequestDetail } from "@/types/loans";
+import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
 import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
 import { PrivyWallet } from "@/types/providers";
 import { NetworkSwitchError } from "@/types/errors";
+
+/**
+ * Fetches all loan requests filtered by status
+ * @param status - The status to filter by (e.g., 'REQUESTED', 'LISTED', 'ACTIVE')
+ * @returns Promise resolving to an array of loan requests with the specified status
+ * @throws Error if the request fails
+ */
+export async function getAllLoanRequestsByStatus(status: LoanRequestStatus | string): Promise<LoanRequest[]> {
+    if (!status) {
+        throw new Error("Status is required");
+    }
+
+    const apiUrl = getApiUrl();
+    const response = await axios.get<{ data: LoanRequest[]; count: number }>(
+        `${apiUrl}/loan-requests?status=${status}`
+    );
+
+    return response.data.data || [];
+}
+
+/**
+ * Counts how many loan requests are in REQUESTED status
+ * @returns Promise resolving to the count of loan requests with REQUESTED status
+ * @throws Error if the request fails
+ */
+export async function countRequestedLoanRequests(): Promise<number> {
+    const apiUrl = getApiUrl();
+    const response = await axios.get<{ data: LoanRequest[]; count: number }>(
+        `${apiUrl}/loan-requests?status=${LoanRequestStatus.REQUESTED}`
+    );
+
+    return response.data.count || 0;
+}
 
 /**
  * Fetches loan requests for a specific borrower address
@@ -66,6 +100,32 @@ export async function getLoanRequestDetail(
     );
 
     return response.data.data;
+}
+
+/**
+ * Changes the status of a loan request
+ * @param loanRequestId - The ID of the loan request
+ * @param status - The new status to set
+ * @returns Promise resolving when the status is changed
+ * @throws Error if the request fails
+ */
+export async function changeLoanRequestStatus(
+    loanRequestId: number,
+    status: LoanRequestStatus | string
+): Promise<void> {
+    if (!loanRequestId || loanRequestId <= 0) {
+        throw new Error("Valid loan request ID is required");
+    }
+
+    if (!status) {
+        throw new Error("Status is required");
+    }
+
+    const apiUrl = getApiUrl();
+    await axios.patch(
+        `${apiUrl}/loan-requests/${loanRequestId}/status`,
+        { status }
+    );
 }
 
 /**

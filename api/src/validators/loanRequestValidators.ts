@@ -208,3 +208,10 @@ export const validateChangeLoanStatusRequest = (id: unknown, status: unknown): s
     return null;
 };
 
+export const validateLoanStatusQueryParam = (status: unknown): { error: string } | { status: LoanStatus } => {
+    const validationError = validateLoanStatus(status);
+    if (validationError) {
+        return { error: validationError };
+    }
+    return { status: status as LoanStatus };
+};
