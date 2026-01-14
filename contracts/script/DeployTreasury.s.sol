@@ -13,7 +13,7 @@ contract DeployTreasury is Script {
         // Default fee is 10% (1000 basis points)
         // Pass 0 to use default, or specify custom fee percentage
         uint256 feePercentage = vm.envOr("TREASURY_FEE_PERCENTAGE", uint256(1000));
-        
+
         // If 0 is provided, use default of 10% (1000 basis points)
         if (feePercentage == 0) {
             feePercentage = 1000; // 10% default
