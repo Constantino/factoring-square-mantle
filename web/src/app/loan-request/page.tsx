@@ -484,7 +484,17 @@ export default function LoanRequestPage() {
 
                     {/* Submit Button */}
                     <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isSubmitting || !walletAddress}>
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={
+                                isSubmitting ||
+                                !walletAddress ||
+                                !confirmations.notPledged ||
+                                !confirmations.authorizeAssignment ||
+                                !formData.deliveryCompleted
+                            }
+                        >
                             {isSubmitting ? "Submitting..." : "Submit Loan Request"}
                         </Button>
                     </div>
