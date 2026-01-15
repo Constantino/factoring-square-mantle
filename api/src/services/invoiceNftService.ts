@@ -1,8 +1,20 @@
-import { GenerateInvoiceMetadataBody, InvoiceMetadata, PinataUploadResult, PinataApiResponse } from '../types/nft';
-import { INVOICE_NFT_INVOICE_IMAGE, PINATA_JWT } from '../config/constants';
+import { ethers } from 'ethers';
+import { GenerateInvoiceMetadataBody, InvoiceMetadata, PinataUploadResult, PinataApiResponse, MintResult } from '../types/nft';
+import { INVOICE_NFT_INVOICE_IMAGE, PINATA_JWT, RPC_URL, PRIVATE_KEY, INVOICE_NFT_ADDRESS } from '../config/constants';
 import { sanitizeForFilename } from '../utils/sanitize';
+import { INVOICENFT_ABI } from '../abi/InvoiceNFT';
+import { validateInvoiceNftAddress, validateRecipientAddress } from '../validators/nftValidator';
 
 export class InvoiceNftService {
+    private provider: ethers.JsonRpcProvider;
+    private wallet: ethers.Wallet;
+    private invoiceNftContract: ethers.Contract;
+
+    constructor() {
+        this.provider = new ethers.JsonRpcProvider(RPC_URL);
+        this.wallet = new ethers.Wallet(PRIVATE_KEY, this.provider);
+        this.invoiceNftContract = new ethers.Contract(INVOICE_NFT_ADDRESS, INVOICENFT_ABI, this.wallet);
+    }
     /**
      * Generates NFT metadata following ERC-721 metadata standard
      */
@@ -105,6 +117,69 @@ export class InvoiceNftService {
             };
         } catch (error) {
             console.error('Error uploading metadata to Pinata:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mints an NFT with the given metadata to the specified address
+     * @param metadata - The invoice metadata to mint
+     * @param toAddress - The address to mint the NFT to
+     * @returns Mint result with tokenId, transaction hash, and URLs
+     */
+    public async mintInvoiceNFT(metadata: InvoiceMetadata, toAddress: string): Promise<MintResult> {
+        // Validate configuration and address
+        const addressConfigError = validateInvoiceNftAddress();
+        if (addressConfigError) {
+            throw new Error(addressConfigError);
+        }
+
+        const recipientAddressError = validateRecipientAddress(toAddress);
+        if (recipientAddressError) {
+            throw new Error(recipientAddressError);
+        }
+
+        try {
+            // First, upload metadata to Pinata to get the URI
+            const pinataResult = await this.uploadMetadataToPinata(metadata);
+            const uri = pinataResult.pinataUrl;
+
+            // Mint the NFT using the Pinata URL as the token URI
+            const tx = await this.invoiceNftContract.mint(toAddress, uri);
+            const receipt = await tx.wait();
+
+            // Extract tokenId from the InvoiceMinted event
+            const invoiceMintedEvent = receipt.logs
+                .map((log: any) => {
+                    try {
+                        return this.invoiceNftContract.interface.parseLog(log);
+                    } catch {
+                        return null;
+                    }
+                })
+                .find((parsedLog: any) => parsedLog && parsedLog.name === 'InvoiceMinted');
+
+            let tokenId: string;
+            if (invoiceMintedEvent && invoiceMintedEvent.args) {
+                tokenId = invoiceMintedEvent.args.tokenId.toString();
+            } else {
+                // Fallback: get the tokenId from the contract's nextTokenId (minus 1 since it increments after mint)
+                const nextTokenId = await this.invoiceNftContract.nextTokenId();
+                tokenId = (nextTokenId - 1n).toString();
+            }
+
+            // Construct explorer URL (assuming Mantle network)
+            const explorerUrl = `https://sepolia.mantlescan.xyz/tx/${receipt.hash}`;
+
+            return {
+                tokenId,
+                txHash: receipt.hash,
+                toAddress,
+                uri,
+                explorerUrl
+            };
+        } catch (error) {
+            console.error('Error minting invoice NFT:', error);
             throw error;
         }
     }

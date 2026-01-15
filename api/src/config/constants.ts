@@ -13,6 +13,7 @@ export const SUPABASE_BUCKET_SECRET_ACCESS_KEY: string = process.env.SUPABASE_BU
 
 // Invoice NFT Configuration
 export const INVOICE_NFT_INVOICE_IMAGE: string = process.env.INVOICE_NFT_INVOICE_IMAGE || '';
+export const INVOICE_NFT_ADDRESS: string = process.env.INVOICE_NFT_ADDRESS || '';
 
 // Pinata Configuration
 export const PINATA_API_KEY: string = process.env.PINATA_API_KEY || '';

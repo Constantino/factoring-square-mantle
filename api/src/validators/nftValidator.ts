@@ -1,4 +1,6 @@
 import { GenerateInvoiceMetadataBody, InvoiceMetadata } from '../types/nft';
+import { INVOICE_NFT_ADDRESS } from '../config/constants';
+import { validateWalletAddress } from './walletAddressValidator';
 
 export const validateName = (name: unknown): string | null => {
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -142,4 +144,25 @@ export const validateInvoiceMetadata = (data: InvoiceMetadataForValidation): str
     }
 
     return null;
+};
+
+/**
+ * Validates that the INVOICE_NFT_ADDRESS constant is configured and is a valid Ethereum address
+ * @returns Error message string if validation fails, null if valid
+ */
+export const validateInvoiceNftAddress = (): string | null => {
+    if (!INVOICE_NFT_ADDRESS || INVOICE_NFT_ADDRESS.trim().length === 0) {
+        return 'INVOICE_NFT_ADDRESS is not configured. Please set it in your environment variables.';
+    }
+
+    return validateWalletAddress(INVOICE_NFT_ADDRESS);
+};
+
+/**
+ * Validates a recipient address to ensure it's a valid Ethereum address
+ * @param recipientAddress - The recipient address to validate
+ * @returns Error message string if validation fails, null if valid
+ */
+export const validateRecipientAddress = (recipientAddress: unknown): string | null => {
+    return validateWalletAddress(recipientAddress);
 };

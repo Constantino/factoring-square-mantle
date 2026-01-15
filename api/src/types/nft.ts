@@ -29,3 +29,11 @@ export interface PinataUploadResult {
     ipfsUrl: string;
     pinataUrl: string;
 }
+
+export interface MintResult {
+    tokenId: string;
+    txHash: string;
+    toAddress: string;
+    uri: string;
+    explorerUrl: string;
+}
