@@ -1,7 +1,7 @@
 export interface PayModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (amount: number) => Promise<void>;
+    onConfirm: (amount: number, originalDebt: number) => Promise<void>;
     totalDebt?: number;
     maxLoan?: number;
     monthlyInterestRate?: number;

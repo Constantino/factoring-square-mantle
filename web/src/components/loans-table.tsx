@@ -43,7 +43,7 @@ export function LoansTable({
         setProcessingStep("Processing payment...");
     };
 
-    const handlePayConfirm = async (amount: number) => {
+    const handlePayConfirm = async (amount: number, originalDebt: number) => {
         if (!selectedRequest) return;
 
         setIsProcessing(true);
@@ -54,6 +54,7 @@ export function LoansTable({
             const hash = await onPay(
                 selectedRequest.id,
                 amount,
+                originalDebt,
                 (step: string) => {
                     setProcessingStep(step);
                 }

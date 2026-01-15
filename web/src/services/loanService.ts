@@ -5,6 +5,7 @@ import { LoanRequest, LoanRequestWithVault, LoanStats, LoanRequestDetail } from 
 import { LoanRequestStatus } from "@/types/loans/loanRequestStatus";
 import { VAULT_ABI } from "@/app/abi/Vault";
 import { ERC20_ABI } from "@/app/abi/ERC20";
+import { TREASURY_ABI } from "@/app/abi/Treasury";
 import { PrivyWallet } from "@/types/providers";
 import { NetworkSwitchError } from "@/types/errors";
 
@@ -336,6 +337,7 @@ export function getTotalDebt(request: LoanRequestWithVault): number {
 export async function repayLoan(
     vaultAddress: string,
     amount: number,
+    originalDebt: number,
     wallet: PrivyWallet,
     loanRequestId: number,
     onProgress?: (step: string) => void
@@ -389,6 +391,7 @@ export async function repayLoan(
         const ethersProvider = new ethers.BrowserProvider(provider);
         const signer = await ethersProvider.getSigner();
         const userAddress = await signer.getAddress();
+        const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
 
         console.log('Starting loan repayment:', {
             vaultAddress,
@@ -406,23 +409,25 @@ export async function repayLoan(
 
         // Convert amount to wei (assuming 6 decimals for USDC)
         const amountInWei = ethers.parseUnits(amount.toString(), 6);
+        const originalDebtInWei = ethers.parseUnits(originalDebt.toString(), 6);
         console.log('Amount in wei:', amountInWei.toString());
+        console.log('Original debt in wei:', originalDebtInWei.toString());
 
         // Create ERC20 token contract instance
         const tokenContract = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
 
         // Check current allowance
         onProgress?.("Checking allowance...");
-        const currentAllowance = await tokenContract.allowance(userAddress, vaultAddress);
+        const currentAllowance = await tokenContract.allowance(userAddress, TREASURY_ADDRESS);
         console.log('Current allowance:', currentAllowance.toString());
         console.log('Required amount:', amountInWei.toString());
         console.log('Needs approval:', currentAllowance < amountInWei);
 
-        // Approve vault to spend tokens if needed
+        // Approve Treasury to spend tokens if needed
         if (BigInt(currentAllowance.toString()) < BigInt(amountInWei.toString())) {
             onProgress?.("Step 1/2: Approving token spending...");
-            console.log('Approving vault to spend tokens...');
-            const approveTx = await tokenContract.approve(vaultAddress, amountInWei);
+            console.log('Approving Treasury to spend tokens...');
+            const approveTx = await tokenContract.approve(TREASURY_ADDRESS, amountInWei);
             console.log('Approval transaction sent:', approveTx.hash);
 
             onProgress?.("Step 1/2: Confirming approval...");
@@ -434,7 +439,7 @@ export async function repayLoan(
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Verify the allowance was set correctly
-            const newAllowance = await tokenContract.allowance(userAddress, vaultAddress);
+            const newAllowance = await tokenContract.allowance(userAddress, TREASURY_ADDRESS);
             console.log('New allowance after approval:', newAllowance.toString());
 
             if (BigInt(newAllowance.toString()) < BigInt(amountInWei.toString())) {
@@ -448,7 +453,7 @@ export async function repayLoan(
             console.log('Sufficient allowance already exists, skipping approval');
         }
 
-        // Create vault contract instance
+        // Create vault contract instance for validation
         const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, signer);
 
         // Validate vault state and borrower before repayment
@@ -479,32 +484,54 @@ export async function repayLoan(
             );
         }
 
-        // Repay loan
-        onProgress?.("Step 2/2: Repaying loan...");
-        console.log('Repaying loan...');
+        // Create Treasury contract instance
+        if (!TREASURY_ADDRESS) {
+            throw new Error("Treasury address not configured");
+        }
+        const treasuryContract = new ethers.Contract(TREASURY_ADDRESS, TREASURY_ABI, signer);
+
+        // Deposit to Treasury
+        onProgress?.("Step 2/2: Depositing to Treasury...");
+        console.log('Depositing to Treasury...');
+        console.log('Parameters:', {
+            originalDebt: originalDebtInWei.toString(),
+            totalDebt: amountInWei.toString(),
+            vault: vaultAddress,
+            currency: usdcAddress
+        });
 
         // Use estimateGas to get better error messages
         try {
-            await vaultContract.repay.estimateGas(amountInWei);
+            await treasuryContract.deposit.estimateGas(
+                originalDebtInWei,
+                amountInWei,
+                vaultAddress,
+                usdcAddress
+            );
         } catch (estimateError: unknown) {
             console.error('Gas estimation failed:', estimateError);
             // Try to extract a meaningful error message
             const error = estimateError as { reason?: string; data?: unknown; message?: string };
             if (error.reason) {
-                throw new Error(`Repayment validation failed: ${error.reason}`);
+                throw new Error(`Treasury deposit validation failed: ${error.reason}`);
             } else if (error.data) {
-                throw new Error(`Repayment validation failed. Check vault state and borrower address.`);
+                throw new Error(`Treasury deposit validation failed. Check parameters.`);
             }
-            throw new Error(`Repayment validation failed: ${error.message || 'Unknown error'}`);
+            throw new Error(`Treasury deposit validation failed: ${error.message || 'Unknown error'}`);
         }
 
-        const repayTx = await vaultContract.repay(amountInWei);
-        console.log('Repayment transaction sent:', repayTx.hash);
+        const depositTx = await treasuryContract.deposit(
+            originalDebtInWei,
+            amountInWei,
+            vaultAddress,
+            usdcAddress
+        );
+        console.log('Deposit transaction sent:', depositTx.hash);
 
-        onProgress?.("Step 2/2: Confirming repayment...");
-        // Wait for repayment transaction to be mined
-        const receipt = await repayTx.wait();
-        console.log('Repayment confirmed in block:', receipt.blockNumber);
+        onProgress?.("Step 2/2: Confirming deposit...");
+        // Wait for deposit transaction to be mined
+        const receipt = await depositTx.wait();
+        console.log('Deposit confirmed in block:', receipt.blockNumber);
 
         onProgress?.("✅ Repayment successful!");
 
@@ -517,7 +544,7 @@ export async function repayLoan(
                 `${apiUrl}/vaults/${vaultAddress}/repayments`,
                 {
                     amount,
-                    txHash: repayTx.hash
+                    txHash: depositTx.hash
                 }
             );
             console.log('Vault repayment tracked successfully');
@@ -540,7 +567,7 @@ export async function repayLoan(
             // Transaction succeeded on-chain, so we still return the hash
         }
 
-        return repayTx.hash;
+        return depositTx.hash;
     } catch (error) {
         console.error("Error repaying loan:", error);
         throw error;

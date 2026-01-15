@@ -5,7 +5,7 @@ export interface LoansTableProps {
     isLoading: boolean;
     error: string | null;
     onView: (requestId: number) => void;
-    onPay: (requestId: number, amount: number, onProgress?: (step: string) => void) => Promise<string>;
+    onPay: (requestId: number, amount: number, originalDebt: number, onProgress?: (step: string) => void) => Promise<string>;
     title?: string;
 }
 
