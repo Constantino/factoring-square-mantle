@@ -519,11 +519,11 @@ export function calculateAllocatedCapital(portfolio: LenderPortfolio[]): number 
  * @returns The total gains from redeemed vaults (difference between redeemed amount and invested amount)
  */
 export function calculateRealizedGains(portfolio: LenderPortfolio[]): number {
-    const redeemedVaults = portfolio.filter(item => item.status === 'REDEEMED');
+    const redeemedVaults = portfolio.filter(item => item.lender_status === 'REDEEMED');
 
     const totalGains = redeemedVaults.reduce((sum, item) => {
         const investedAmount = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
-        const redeemedAmount = item.redeemed_amount || 0;
+        const redeemedAmount = typeof item.redeemed_amount === 'string' ? parseFloat(item.redeemed_amount) : (item.redeemed_amount || 0);
         const gain = redeemedAmount - investedAmount;
         return sum + (isNaN(gain) ? 0 : gain);
     }, 0);
@@ -545,28 +545,40 @@ export function calculateUnrealizedGains(portfolio: LenderPortfolio[]): number {
     );
 
     const totalUnrealizedGains = repaidVaults.reduce((sum, item) => {
+        // Skip if no fund_release_at (funds haven't been released yet)
+        if (!item.fund_release_at) {
+            return sum;
+        }
+
+        // Skip if no maturity_date
+        if (!item.maturity_date) {
+            return sum;
+        }
+
         const investedAmount = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
-        const totalRepayments = typeof item.total_repayments === 'string' ? parseFloat(item.total_repayments) : item.total_repayments;
-        const vaultCapacity = typeof item.current_capacity === 'string' ? parseFloat(item.current_capacity) : item.current_capacity;
+        const monthlyInterestRate = item.monthly_interest_rate || 0;
 
-        // Skip if no repayments yet or no capacity
-        if (!totalRepayments || !vaultCapacity || vaultCapacity === 0) {
+        // Calculate days between fund release and maturity date
+        const fundReleaseDate = new Date(item.fund_release_at);
+        const maturityDate = new Date(item.maturity_date);
+
+        const numberOfDays = Math.floor((maturityDate.getTime() - fundReleaseDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // If days is zero or negative, no interest accrued
+        if (numberOfDays <= 0) {
             return sum;
         }
 
-        // Calculate lender's proportional share of total repayments
-        // lender_share = (invested_amount / vault_capacity) * total_repayments
-        const lenderShare = (investedAmount / vaultCapacity) * totalRepayments;
+        // Calculate interest: numberOfDays * (monthly_interest_rate / 30) * invested_amount
+        const dailyInterestRate = monthlyInterestRate / 30;
+        const interest = numberOfDays * dailyInterestRate * investedAmount;
 
-        // Unrealized gain = lender's share - original investment
-        const unrealizedGain = lenderShare - investedAmount;
-
-        // Ensure result is a valid number and non-negative
-        if (isNaN(unrealizedGain) || !isFinite(unrealizedGain) || unrealizedGain < 0) {
+        // Ensure result is a valid number
+        if (isNaN(interest) || !isFinite(interest)) {
             return sum;
         }
 
-        return sum + unrealizedGain;
+        return sum + interest;
     }, 0);
 
     // Round to 6 decimals (USDC precision)

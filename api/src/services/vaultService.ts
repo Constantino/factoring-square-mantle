@@ -455,11 +455,7 @@ export class VaultService {
                 v.fund_release_tx_hash,
                 v.fund_release_at,
                 lr.invoice_due_date as maturity_date,
-                lr.monthly_interest_rate,
-                COALESCE(
-                    (SELECT SUM(amount) FROM "VaultRepayments" WHERE vault_id = v.vault_id),
-                    0
-                ) as total_repayments
+                lr.monthly_interest_rate
             FROM "VaultLenders" vl
             JOIN "Vaults" v ON vl.vault_id = v.vault_id
             LEFT JOIN "LoanRequests" lr ON v.loan_request_id = lr.id
