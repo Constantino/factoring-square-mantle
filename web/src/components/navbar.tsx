@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useRef, useEffect, useState } from "react";
 import { useUserStore } from "@/stores/userStore";
@@ -141,7 +142,13 @@ const Navbar = () => {
                     <div className="flex items-center gap-6">
                         {/* Logo/Brand */}
                         <Link href="/" className="text-xl font-bold text-foreground font-mono flex items-center gap-2">
-                            <div className="w-3 h-3 bg-primary"></div>
+                            <Image
+                                src="/invoice-image.png"
+                                alt="Factoring Square"
+                                width={32}
+                                height={32}
+                                className="object-contain"
+                            />
                             Factoring Square
                         </Link>
 
