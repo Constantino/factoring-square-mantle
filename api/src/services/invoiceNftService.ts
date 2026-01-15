@@ -4,6 +4,7 @@ import { INVOICE_NFT_INVOICE_IMAGE, PINATA_JWT, RPC_URL, PRIVATE_KEY, INVOICE_NF
 import { sanitizeForFilename } from '../utils/sanitize';
 import { INVOICENFT_ABI } from '../abi/InvoiceNFT';
 import { validateInvoiceNftAddress, validateRecipientAddress } from '../validators/nftValidator';
+import { pool } from '../config/database';
 
 export class InvoiceNftService {
     private provider: ethers.JsonRpcProvider;
@@ -170,6 +171,22 @@ export class InvoiceNftService {
                 const nextTokenId = await this.invoiceNftContract.nextTokenId();
                 tokenId = (nextTokenId - 1n).toString();
             }
+
+            // Save token_id, token_uri, and token_address to LoanRequests table
+            const updateQuery = `
+                UPDATE "LoanRequests"
+                SET 
+                    token_id = $1,
+                    token_uri = $2,
+                    token_address = $3
+                WHERE id = $4
+            `;
+            await pool.query(updateQuery, [
+                parseInt(tokenId, 10),
+                uri,
+                INVOICE_NFT_ADDRESS,
+                data.loanRequestId
+            ]);
 
             // Construct explorer URL
             const explorerUrl = `${EXPLORER_URL_BASE}/tx/${receipt.hash}`;
