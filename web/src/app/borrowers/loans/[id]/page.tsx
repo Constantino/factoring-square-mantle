@@ -11,6 +11,7 @@ import { getLoanRequestDetail, changeLoanRequestStatus } from "@/services/loanSe
 import { useRoleStore } from "@/stores/roleStore";
 import { ApproveModal } from "@/components/approve-modal";
 import { getApiUrl } from "@/lib/api";
+import { CountBadge } from "@/components/count-badge";
 
 export default function LoanRequestDetailPage() {
     const params = useParams();
@@ -360,7 +361,10 @@ export default function LoanRequestDetailPage() {
                                     {/* Lenders Table */}
                                     {vault.lenders && vault.lenders.length > 0 && (
                                         <div className="mt-6">
-                                            <h3 className="text-sm font-semibold mb-3 text-center">Lenders ({vault.lenders.length})</h3>
+                                            <h3 className="text-sm font-semibold mb-3 text-center inline-flex items-center justify-center gap-2 w-full">
+                                                <CountBadge count={vault.lenders.length} variant="blue" />
+                                                <span>Lenders</span>
+                                            </h3>
                                             <div className="border rounded-lg overflow-hidden">
                                                 <table className="w-full text-xs">
                                                     <thead>
@@ -413,7 +417,10 @@ export default function LoanRequestDetailPage() {
                                     {/* Repayments Table */}
                                     {vault.repayments && vault.repayments.length > 0 && (
                                         <div className="mt-6">
-                                            <h3 className="text-sm font-semibold mb-3 text-center">Repayment History ({vault.repayments.length})</h3>
+                                            <h3 className="text-sm font-semibold mb-3 text-center inline-flex items-center justify-center gap-2 w-full">
+                                                <CountBadge count={vault.repayments.length} variant="gray" />
+                                                <span>Repayment History</span>
+                                            </h3>
                                             <div className="border rounded-lg overflow-hidden">
                                                 <table className="w-full text-xs">
                                                     <thead>
@@ -449,6 +456,79 @@ export default function LoanRequestDetailPage() {
                                                                 </td>
                                                             </tr>
                                                         ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Redemptions Table */}
+                                    {vault.lenders && vault.lenders.filter(l => l.status === 'REDEEMED').length > 0 && (
+                                        <div className="mt-6">
+                                            <h3 className="text-sm font-semibold mb-3 text-center inline-flex items-center justify-center gap-2 w-full">
+                                                <CountBadge count={vault.lenders.filter(l => l.status === 'REDEEMED').length} variant="green" />
+                                                <span>Redemption History</span>
+                                            </h3>
+                                            <div className="border rounded-lg overflow-hidden">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="border-b bg-muted/50 text-xs text-muted-foreground">
+                                                            <th className="text-center py-2 px-3 font-medium">Lender Address</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Invested Amount</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Redeemed Amount</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Gain</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Transaction</th>
+                                                            <th className="text-center py-2 px-3 font-medium">Date</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {vault.lenders.filter(l => l.status === 'REDEEMED').map((lender) => {
+                                                            const investedAmount = parseFloat(lender.amount);
+                                                            const redeemedAmount = parseFloat(lender.redeemed_amount || '0');
+                                                            const gain = redeemedAmount - investedAmount;
+                                                            return (
+                                                                <tr key={lender.lender_id} className="border-b last:border-0 hover:bg-muted/30">
+                                                                    <td className="py-2 px-3 text-center">
+                                                                        <a
+                                                                            href={`https://sepolia.mantlescan.xyz/address/${lender.lender_address}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                                                        >
+                                                                            {shortenAddress(lender.lender_address)}
+                                                                            <ExternalLink className="h-2.5 w-2.5" />
+                                                                        </a>
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center font-medium">
+                                                                        {formatCurrency(investedAmount)}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center font-medium">
+                                                                        {formatCurrency(redeemedAmount)}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center font-medium">
+                                                                        <span className={gain >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                            {formatCurrency(gain)}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center">
+                                                                        {lender.redemption_tx_hash && (
+                                                                            <a
+                                                                                href={`https://sepolia.mantlescan.xyz/tx/${lender.redemption_tx_hash}`}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                                                            >
+                                                                                {shortenAddress(lender.redemption_tx_hash)}
+                                                                                <ExternalLink className="h-2.5 w-2.5" />
+                                                                            </a>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="py-2 px-3 text-center text-muted-foreground">
+                                                                        {lender.redeemed_at ? formatDate(lender.redeemed_at) : '-'}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>

@@ -433,7 +433,7 @@ export class VaultService {
 
     async getPortfolioByLender(lenderAddress: string): Promise<any[]> {
         const query = `
-            SELECT 
+            SELECT
                 vl.lender_id,
                 vl.lender_address,
                 vl.amount,
@@ -452,9 +452,14 @@ export class VaultService {
                 v.current_capacity,
                 v.status,
                 v.funded_at,
-                v.fund_release_tx_hash
+                v.fund_release_tx_hash,
+                v.fund_release_at,
+                v.loan_request_id,
+                lr.invoice_due_date as maturity_date,
+                lr.monthly_interest_rate
             FROM "VaultLenders" vl
             JOIN "Vaults" v ON vl.vault_id = v.vault_id
+            LEFT JOIN "LoanRequests" lr ON v.loan_request_id = lr.id
             WHERE vl.lender_address = $1
             ORDER BY vl.created_at DESC
         `;
