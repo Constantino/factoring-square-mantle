@@ -9,9 +9,6 @@ import { loanService } from '../services/loanService';
 import { LoanStatus } from '../types/loanStatus';
 import { uploadFileToSupabase } from '../services/fileUploadService';
 import { MulterRequest } from '../types/multer';
-import { invoiceNftService } from '../services/invoiceNftService';
-import { TREASURY_ADDRESS } from '../config/constants';
-import { validateTreasuryAddress } from '../validators/nftValidator';
 
 const saveLoanRequest = async (params: LoanRequestBody & { invoice_file_url?: string | null }): Promise<LoanRequest> => {
     const query = `

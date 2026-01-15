@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { GenerateInvoiceMetadataBody, InvoiceMetadata, MintInvoiceNFTBody } from '../types/nft';
-import { validateRequest, validateInvoiceMetadata, validateMintInvoiceNFTRequest, validateTreasuryAddress } from '../validators/nftValidator';
+import { validateRequest, validateInvoiceMetadata, validateMintInvoiceNFTRequest } from '../validators/nftValidator';
 import { sanitizeGenerateInvoiceMetadataRequest, sanitizeMintInvoiceNFTRequest } from '../utils/sanitize';
 import { invoiceNftService } from '../services/invoiceNftService';
 import { pool } from '../config/database';
 import { LoanRequest } from '../models/loanRequest';
-import { TREASURY_ADDRESS } from '../config/constants';
 import { validateLoanId } from '../validators/loanRequestValidators';
 
 export const generateInvoiceMetadata = async (req: Request, res: Response): Promise<void> => {
