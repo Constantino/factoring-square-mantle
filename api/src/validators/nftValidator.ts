@@ -1,4 +1,4 @@
-import { GenerateInvoiceMetadataBody } from '../types/nft';
+import { GenerateInvoiceMetadataBody, InvoiceMetadata } from '../types/nft';
 
 export const validateName = (name: unknown): string | null => {
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -64,6 +64,81 @@ export const validateRequest = (data: GenerateInvoiceMetadataBodyForValidation):
     const invoiceNumberError = validateInvoiceNumber(data.invoiceNumber);
     if (invoiceNumberError) {
         return invoiceNumberError;
+    }
+
+    return null;
+};
+
+export const validateImage = (image: unknown): string | null => {
+    if (!image || typeof image !== 'string' || image.trim().length === 0) {
+        return 'Image is required and must be a non-empty string';
+    }
+
+    // Validate URL format
+    try {
+        new URL(image);
+    } catch {
+        return 'Image must be a valid URL';
+    }
+
+    return null;
+};
+
+export const validateAttributes = (attributes: unknown): string | null => {
+    if (!attributes) {
+        return 'Attributes are required';
+    }
+
+    if (!Array.isArray(attributes)) {
+        return 'Attributes must be an array';
+    }
+
+    if (attributes.length === 0) {
+        return 'Metadata must have at least one attribute';
+    }
+
+    // Validate each attribute structure
+    for (const attr of attributes) {
+        if (typeof attr !== 'object' || attr === null) {
+            return 'Each attribute must be an object';
+        }
+
+        if (!('trait_type' in attr) || typeof attr.trait_type !== 'string' || attr.trait_type.trim().length === 0) {
+            return 'Each attribute must have a non-empty trait_type string';
+        }
+
+        if (!('value' in attr) || typeof attr.value !== 'string' || attr.value.trim().length === 0) {
+            return 'Each attribute must have a non-empty value string';
+        }
+    }
+
+    return null;
+};
+
+// Type for validation where all fields are unknown (before validation)
+type InvoiceMetadataForValidation = {
+    [K in keyof InvoiceMetadata]: unknown;
+};
+
+export const validateInvoiceMetadata = (data: InvoiceMetadataForValidation): string | null => {
+    const nameError = validateName(data.name);
+    if (nameError) {
+        return nameError;
+    }
+
+    const descriptionError = validateDescription(data.description);
+    if (descriptionError) {
+        return descriptionError;
+    }
+
+    const imageError = validateImage(data.image);
+    if (imageError) {
+        return imageError;
+    }
+
+    const attributesError = validateAttributes(data.attributes);
+    if (attributesError) {
+        return attributesError;
     }
 
     return null;
