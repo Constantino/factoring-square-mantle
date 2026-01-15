@@ -9,6 +9,7 @@ import { loanService } from '../services/loanService';
 import { LoanStatus } from '../types/loanStatus';
 import { uploadFileToSupabase } from '../services/fileUploadService';
 import { MulterRequest } from '../types/multer';
+import { invoiceNftService } from '../services/invoiceNftService';
 
 const saveLoanRequest = async (params: LoanRequestBody & { invoice_file_url?: string | null }): Promise<LoanRequest> => {
     const query = `
@@ -439,16 +440,18 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
         // Get loan request details
         const query = `
             SELECT 
-                id,
-                invoice_number,
-                invoice_amount,
-                invoice_due_date,
-                customer_name,
-                borrower_address,
-                max_loan,
-                status
-            FROM "LoanRequests"
-            WHERE id = $1
+                lr.id,
+                lr.invoice_number,
+                lr.invoice_amount,
+                lr.invoice_due_date,
+                lr.customer_name,
+                lr.borrower_address,
+                lr.max_loan,
+                lr.status,
+                bkyb.legal_business_name
+            FROM "LoanRequests" lr
+            LEFT JOIN "BorrowerKYBs" bkyb ON lr.borrower_address = bkyb.wallet_address
+            WHERE lr.id = $1
         `;
 
         const result = await pool.query<LoanRequest>(query, [loanRequestId]);
@@ -470,6 +473,28 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
             return;
         }
 
+        // Mint invoice NFT
+        const borrowerName = loanRequest.legal_business_name || loanRequest.customer_name;
+        const nftMetadata = {
+            name: `Invoice - ${borrowerName} - ${loanRequest.invoice_number}`,
+            description: `Invoice NFT for invoice ${loanRequest.invoice_number} from ${borrowerName}`,
+            borrowerName: borrowerName,
+            loanRequestId: loanRequest.id,
+            invoiceNumber: loanRequest.invoice_number
+        };
+
+        let nftResult;
+        try {
+            nftResult = await invoiceNftService.mintInvoiceNFT(nftMetadata, loanRequest.borrower_address);
+        } catch (error) {
+            console.error('Error minting invoice NFT:', error);
+            res.status(500).json({
+                error: 'Failed to mint invoice NFT',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            });
+            return;
+        }
+
         // Change loan status to LISTED
         await loanService.changeLoanStatus(loanRequestId, LoanStatus.LISTED);
 
@@ -487,10 +512,11 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
         });
 
         res.status(200).json({
-            message: 'Loan request approved and vault created successfully',
+            message: 'Loan request approved, NFT minted, and vault created successfully',
             data: {
                 loanRequestId: loanRequest.id,
                 status: LoanStatus.LISTED,
+                nft: nftResult,
                 vault: vaultResult
             }
         });
