@@ -89,7 +89,12 @@ export class LoanService {
                                         'lender_address', vl.lender_address,
                                         'amount', vl.amount,
                                         'tx_hash', vl.tx_hash,
-                                        'created_at', vl.created_at
+                                        'created_at', vl.created_at,
+                                        'status', vl.status,
+                                        'shares_amount', vl.shares_amount,
+                                        'redeemed_amount', vl.redeemed_amount,
+                                        'redemption_tx_hash', vl.redemption_tx_hash,
+                                        'redeemed_at', vl.redeemed_at
                                     )
                                 ), '[]'::json)
                                 FROM "VaultLenders" vl
