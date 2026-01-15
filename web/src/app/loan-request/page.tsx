@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
@@ -8,9 +9,41 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
+import { getApiUrl } from "@/lib/api";
 
 export default function LoanRequestPage() {
+    const router = useRouter();
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
+    const [isCheckingKYB, setIsCheckingKYB] = useState(false);
+    const [kybCheckComplete, setKybCheckComplete] = useState(false);
+
+    // Check if borrower has KYB before allowing loan request
+    useEffect(() => {
+        const checkKYB = async () => {
+            if (!walletAddress || !walletsReady || !privyReady) return;
+
+            setIsCheckingKYB(true);
+            try {
+                const apiUrl = getApiUrl();
+                const response = await axios.get(`${apiUrl}/borrowers/kybs/check/${walletAddress}`);
+
+                if (!response.data.hasKYB) {
+                    // Redirect to KYB form if borrower hasn't completed KYB
+                    router.push('/borrower-kyb');
+                } else {
+                    setKybCheckComplete(true);
+                }
+            } catch (error) {
+                console.error('Error checking KYB:', error);
+                setKybCheckComplete(false);
+            } finally {
+                setIsCheckingKYB(false);
+            }
+        };
+
+        checkKYB();
+    }, [walletAddress, walletsReady, privyReady, router]);
+
     const [formData, setFormData] = useState({
         term: "",
         invoiceNumber: "",
@@ -204,12 +237,23 @@ export default function LoanRequestPage() {
         } catch (error) {
             console.error("Error submitting loan request:", error);
             if (axios.isAxiosError(error)) {
-                setSubmitError(
-                    error.response?.data?.error ||
-                    error.response?.data?.message ||
-                    error.message ||
-                    "Failed to submit loan request"
-                );
+                // Check if error is due to missing KYB
+                if (error.response?.status === 403 && error.response?.data?.requiresKYB) {
+                    setSubmitError(
+                        error.response.data.message || "You must complete KYB verification before creating a loan request"
+                    );
+                    // Redirect to KYB form after a short delay
+                    setTimeout(() => {
+                        router.push('/borrower-kyb');
+                    }, 2000);
+                } else {
+                    setSubmitError(
+                        error.response?.data?.error ||
+                        error.response?.data?.message ||
+                        error.message ||
+                        "Failed to submit loan request"
+                    );
+                }
             } else {
                 setSubmitError("An unexpected error occurred");
             }
@@ -217,6 +261,19 @@ export default function LoanRequestPage() {
             setIsSubmitting(false);
         }
     };
+
+    // Show loading state while checking KYB
+    if (isCheckingKYB) {
+        return (
+            <div className="w-full p-8">
+                <div className="max-w-3xl mx-auto">
+                    <div className="flex items-center justify-center py-12">
+                        <p className="text-muted-foreground">Verifying KYB status...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full p-8">

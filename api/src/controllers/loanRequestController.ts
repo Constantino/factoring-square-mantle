@@ -9,6 +9,7 @@ import { loanService } from '../services/loanService';
 import { LoanStatus } from '../types/loanStatus';
 import { uploadFileToSupabase } from '../services/fileUploadService';
 import { MulterRequest } from '../types/multer';
+import { checkBorrowerHasKYB } from '../services/borrowerKybService';
 
 const saveLoanRequest = async (params: LoanRequestBody & { invoice_file_url?: string | null }): Promise<LoanRequest> => {
     const query = `
@@ -262,6 +263,17 @@ export const createLoanRequest = async (req: Request, res: Response): Promise<vo
             assignment_signed,
             borrower_address,
         } = sanitizedData;
+
+        // Check if borrower has KYB
+        const hasKYB = await checkBorrowerHasKYB(borrower_address);
+        if (!hasKYB) {
+            res.status(403).json({
+                error: 'Borrower KYB not found',
+                message: 'You must complete KYB verification before creating a loan request',
+                requiresKYB: true
+            });
+            return;
+        }
 
         // Handle file upload if present
         let invoiceFileUrl: string | null = null;

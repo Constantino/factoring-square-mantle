@@ -11,6 +11,7 @@ import {
     validateWalletAddress,
 } from '../validators/borrowerKybValidators';
 import { sanitizeBorrowerKYBRequest } from '../utils/sanitize';
+import { checkBorrowerHasKYB } from '../services/borrowerKybService';
 
 export const createBorrowerKYB = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -117,6 +118,33 @@ export const createBorrowerKYB = async (req: Request, res: Response): Promise<vo
         console.error('Error creating borrower KYB:', error);
         res.status(500).json({
             error: 'Failed to create borrower KYB',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const checkBorrowerKYB = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { walletAddress } = req.params;
+
+        // Validate wallet address
+        const walletAddressError = validateWalletAddress(walletAddress);
+        if (walletAddressError) {
+            res.status(400).json({ error: walletAddressError });
+            return;
+        }
+
+        // Check if KYB exists for this wallet address
+        const hasKYB = await checkBorrowerHasKYB(walletAddress);
+
+        res.status(200).json({
+            hasKYB,
+            walletAddress
+        });
+    } catch (error) {
+        console.error('Error checking borrower KYB:', error);
+        res.status(500).json({
+            error: 'Failed to check borrower KYB',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

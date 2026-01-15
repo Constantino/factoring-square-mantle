@@ -50,12 +50,6 @@ export function AppSidebar() {
 
     const allMenuItems: MenuItem[] = [
         {
-            title: "Users",
-            url: "/users",
-            icon: Users,
-            roles: ['Admin'],
-        },
-        {
             title: "Admin panel",
             url: "/admin",
             icon: LayoutDashboard,
@@ -71,12 +65,6 @@ export function AppSidebar() {
             title: "Request Loan",
             url: "/loan-request",
             icon: Receipt,
-            roles: ['Admin', 'Borrower'],
-        },
-        {
-            title: "Borrower KYB",
-            url: "/borrower-kyb",
-            icon: Building2,
             roles: ['Admin', 'Borrower'],
         },
         {
