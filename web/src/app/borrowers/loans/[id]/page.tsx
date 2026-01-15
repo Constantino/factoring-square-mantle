@@ -13,6 +13,16 @@ import { ApproveModal } from "@/components/approve-modal";
 import { getApiUrl } from "@/lib/api";
 import { CountBadge } from "@/components/count-badge";
 
+interface NFTMetadata {
+    name?: string;
+    description?: string;
+    image?: string;
+    attributes?: Array<{
+        trait_type: string;
+        value: string;
+    }>;
+}
+
 export default function LoanRequestDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -24,6 +34,8 @@ export default function LoanRequestDetailPage() {
     const [error, setError] = useState<string | null>(null);
     const [isChangingStatus, setIsChangingStatus] = useState(false);
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [nftMetadata, setNftMetadata] = useState<NFTMetadata | null>(null);
+    const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
     useEffect(() => {
         if (loanId) {
@@ -31,6 +43,25 @@ export default function LoanRequestDetailPage() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loanId]);
+
+    useEffect(() => {
+        const fetchNFTMetadata = async () => {
+            if (loanDetail?.token_uri) {
+                try {
+                    setIsLoadingMetadata(true);
+                    const response = await axios.get(loanDetail.token_uri);
+                    setNftMetadata(response.data);
+                } catch (error) {
+                    console.error("Error fetching NFT metadata:", error);
+                    setNftMetadata(null);
+                } finally {
+                    setIsLoadingMetadata(false);
+                }
+            }
+        };
+
+        fetchNFTMetadata();
+    }, [loanDetail?.token_uri]);
 
     const fetchLoanDetail = async () => {
         try {
@@ -319,121 +350,165 @@ export default function LoanRequestDetailPage() {
                         </div>
                     </div>
 
-                    {/* NFT Information */}
-                    {(loanDetail.token_id || loanDetail.token_uri || loanDetail.token_address) && (
-                        <div>
-                            <h2 className="text-base font-semibold mb-3 text-center">NFT Information</h2>
-                            <div className="border rounded-lg overflow-hidden">
-                                <table className="w-full text-xs">
-                                    <tbody>
-                                        <tr className="border-b hover:bg-muted/30">
-                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
-                                                Token ID
-                                            </td>
-                                            <td className="py-2 px-4 text-left font-mono">
-                                                {loanDetail.token_id !== null && loanDetail.token_id !== undefined ? `#${loanDetail.token_id}` : '-'}
-                                            </td>
-                                        </tr>
-                                        <tr className="border-b hover:bg-muted/30">
-                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
-                                                Token Address
-                                            </td>
-                                            <td className="py-2 px-4 text-left">
-                                                {loanDetail.token_address ? (
-                                                    <a
-                                                        href={`https://sepolia.mantlescan.xyz/address/${loanDetail.token_address}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
-                                                    >
-                                                        {loanDetail.token_address}
-                                                        <ExternalLink className="h-2.5 w-2.5" />
-                                                    </a>
-                                                ) : (
-                                                    '-'
-                                                )}
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-muted/30">
-                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
-                                                Token URI
-                                            </td>
-                                            <td className="py-2 px-4 text-left">
-                                                {loanDetail.token_uri ? (
-                                                    <a
-                                                        href={loanDetail.token_uri}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 break-all"
-                                                    >
-                                                        {loanDetail.token_uri}
-                                                        <ExternalLink className="h-2.5 w-2.5 flex-shrink-0" />
-                                                    </a>
-                                                ) : (
-                                                    '-'
-                                                )}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
+                    {/* Separator */}
+                    <hr className="border-t border-border" />
 
                     {loanDetail.vaults && loanDetail.vaults.length > 0 && (
                         <>
-                            {/* Vault Information */}
                             {loanDetail.vaults.map((vault) => (
                                 <div key={vault.vault_id}>
-                                    <h2 className="text-base font-semibold mb-3 text-center">Vault Information</h2>
-
-                                    <div className="space-y-2 mb-4">
-                                        <div className="flex">
-                                            <p className="text-xs text-muted-foreground w-48">Vault Address</p>
-                                            <a
-                                                href={`https://sepolia.mantlescan.xyz/address/${vault.vault_address}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                                            >
-                                                {vault.vault_address}
-                                                <ExternalLink className="h-3 w-3" />
-                                            </a>
-                                        </div>
-                                        <div className="flex">
-                                            <p className="text-xs text-muted-foreground w-48">Vault Name</p>
-                                            <p className="text-xs font-medium">{vault.vault_name}</p>
-                                        </div>
-                                        <div className="flex">
-                                            <p className="text-xs text-muted-foreground w-48">Status</p>
-                                            <p className="text-xs font-medium">{vault.status}</p>
-                                        </div>
-                                        <div className="flex">
-                                            <p className="text-xs text-muted-foreground w-48">Max Capacity</p>
-                                            <p className="text-xs font-medium">{formatCurrency(vault.max_capacity)}</p>
-                                        </div>
-                                        <div className="flex">
-                                            <p className="text-xs text-muted-foreground w-48">Current Capacity</p>
-                                            <p className="text-xs font-medium">{formatCurrency(vault.current_capacity)}</p>
-                                        </div>
-                                        {vault.funded_at && (
-                                            <div className="flex">
-                                                <p className="text-xs text-muted-foreground w-48">Funded At</p>
-                                                <p className="text-xs font-medium">{formatDate(vault.funded_at)}</p>
+                                    <div className="flex gap-6 items-center mb-6">
+                                        {/* Left Column - Vault Details Table (70%) */}
+                                        <div className="flex-[7]">
+                                            <div className="border rounded-lg overflow-hidden">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="border-b bg-muted/50">
+                                                            <th colSpan={2} className="py-2 px-4 text-center font-semibold text-foreground text-sm">
+                                                                Vault
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr className="border-b hover:bg-muted/30">
+                                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                Vault Address
+                                                            </td>
+                                                            <td className="py-2 px-4 text-left">
+                                                                <a
+                                                                    href={`https://sepolia.mantlescan.xyz/address/${vault.vault_address}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                                                >
+                                                                    {vault.vault_address}
+                                                                    <ExternalLink className="h-3 w-3" />
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                        <tr className="border-b hover:bg-muted/30">
+                                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                Vault Name
+                                                            </td>
+                                                            <td className="py-2 px-4 text-left font-medium">
+                                                                {vault.vault_name}
+                                                            </td>
+                                                        </tr>
+                                                        <tr className="border-b hover:bg-muted/30">
+                                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                Status
+                                                            </td>
+                                                            <td className="py-2 px-4 text-left font-medium">
+                                                                {vault.status}
+                                                            </td>
+                                                        </tr>
+                                                        <tr className="border-b hover:bg-muted/30">
+                                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                Max Capacity
+                                                            </td>
+                                                            <td className="py-2 px-4 text-left font-medium">
+                                                                {formatCurrency(vault.max_capacity)}
+                                                            </td>
+                                                        </tr>
+                                                        <tr className="border-b hover:bg-muted/30">
+                                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                Current Capacity
+                                                            </td>
+                                                            <td className="py-2 px-4 text-left font-medium">
+                                                                {formatCurrency(vault.current_capacity)}
+                                                            </td>
+                                                        </tr>
+                                                        {vault.funded_at && (
+                                                            <tr className="border-b hover:bg-muted/30">
+                                                                <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                    Funded At
+                                                                </td>
+                                                                <td className="py-2 px-4 text-left font-medium">
+                                                                    {formatDate(vault.funded_at)}
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                        {vault.fund_release_tx_hash && (
+                                                            <tr className="hover:bg-muted/30">
+                                                                <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                                    Fund Release Transaction
+                                                                </td>
+                                                                <td className="py-2 px-4 text-left">
+                                                                    <a
+                                                                        href={`https://sepolia.mantlescan.xyz/tx/${vault.fund_release_tx_hash}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                                                    >
+                                                                        {vault.fund_release_tx_hash}
+                                                                        <ExternalLink className="h-3 w-3" />
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        )}
-                                        {vault.fund_release_tx_hash && (
-                                            <div className="flex">
-                                                <p className="text-xs text-muted-foreground w-48">Fund Release Transaction</p>
-                                                <a
-                                                    href={`https://sepolia.mantlescan.xyz/tx/${vault.fund_release_tx_hash}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                                                >
-                                                    {vault.fund_release_tx_hash}
-                                                    <ExternalLink className="h-3 w-3" />
-                                                </a>
+                                        </div>
+
+                                        {/* Right Column - NFT Preview (30%) */}
+                                        {loanDetail.token_uri && (
+                                            <div className="flex-[3]">
+                                                {isLoadingMetadata ? (
+                                                    <div className="text-xs text-muted-foreground text-center">Loading NFT metadata...</div>
+                                                ) : nftMetadata?.image ? (
+                                                    <div className="flex flex-col gap-2">
+                                                        {/* NFT Name and Description - Above Image */}
+                                                        {nftMetadata.name && (
+                                                            <p className="text-xs font-medium text-foreground text-center">{nftMetadata.name}</p>
+                                                        )}
+                                                        {nftMetadata.description && (
+                                                            <p className="text-xs text-muted-foreground text-center">{nftMetadata.description}</p>
+                                                        )}
+
+                                                        {/* NFT Image - Reduced by 50% (70% - 20% = 50%) */}
+                                                        <img
+                                                            src={nftMetadata.image}
+                                                            alt={nftMetadata.name || "NFT Image"}
+                                                            className="w-[50%] h-auto mx-auto rounded-lg"
+                                                        />
+
+                                                        {/* Token Links - No Gap */}
+                                                        <div className="flex flex-col mt-1 leading-tight">
+                                                            {/* Token Address Link */}
+                                                            {loanDetail.token_address && (
+                                                                <div className="text-center">
+                                                                    <a
+                                                                        href={`https://sepolia.mantlescan.xyz/address/${loanDetail.token_address}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-[10px] leading-none text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-0.5"
+                                                                    >
+                                                                        Token Address
+                                                                        <ExternalLink className="h-2 w-2" />
+                                                                    </a>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Token URI Link */}
+                                                            {loanDetail.token_uri && (
+                                                                <div className="text-center">
+                                                                    <a
+                                                                        href={loanDetail.token_uri}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-[10px] leading-none text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-0.5"
+                                                                    >
+                                                                        Token URI
+                                                                        <ExternalLink className="h-2 w-2" />
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs text-muted-foreground text-center">No image available</div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
