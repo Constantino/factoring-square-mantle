@@ -198,7 +198,7 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
 
-                    <Card
+                    {/* <Card
                         initial={false}
                         whileHover={undefined}
                     >
@@ -257,7 +257,7 @@ export default function AdminPage() {
                                 </div>
                             </div>
                         </CardContent>
-                    </Card>
+                    </Card> */}
 
                     <Card
                         initial={false}
