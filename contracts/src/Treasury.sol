@@ -88,9 +88,15 @@ contract Treasury is Ownable {
             // Send rest payment minus fee to vault using internal transfer function
             _transferToVault(sentToVault, vault, currency);
 
-            // Instantiate Vault and mark as repaid
+            // Instantiate Vault and mark as repaid if conditions are met
             Vault vaultInstance = Vault(vault);
-            vaultInstance.markAsRepaid();
+            // Check if vault is in ACTIVE state (enum value 1) and has enough assets
+            if (
+                uint8(vaultInstance.state()) == 1 &&
+                vaultInstance.totalAssets() >= vaultInstance.MAX_CAPACITY()
+            ) {
+                vaultInstance.markAsRepaid();
+            }
 
             emit InterestProcessed(interest, fee, sentToVault);
         }
