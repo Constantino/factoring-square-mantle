@@ -99,6 +99,25 @@ export default function LoanRequestDetailPage() {
             setError(null);
 
             const apiUrl = getApiUrl();
+
+            // First, tokenize the invoice (mint NFT) - this is imperative before approval
+            try {
+                await axios.post(
+                    `${apiUrl}/nft/tokenize/${loanDetail.id}`
+                );
+            } catch (tokenizeError) {
+                console.error("Error tokenizing invoice:", tokenizeError);
+                if (axios.isAxiosError(tokenizeError)) {
+                    throw new Error(
+                        tokenizeError.response?.data?.error ||
+                        tokenizeError.response?.data?.message ||
+                        "Failed to tokenize invoice. Cannot proceed with approval."
+                    );
+                }
+                throw new Error("Failed to tokenize invoice. Cannot proceed with approval.");
+            }
+
+            // Then, approve the loan request
             const response = await axios.post(
                 `${apiUrl}/loan-requests/${loanDetail.id}/approve`
             );
