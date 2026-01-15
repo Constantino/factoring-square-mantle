@@ -450,7 +450,7 @@ export async function previewRedemption(
     try {
         // Get the Ethereum provider from Privy wallet
         const provider = await wallet.getEthereumProvider();
-        
+
         const ethersProvider = new ethers.BrowserProvider(provider);
         const signer = await ethersProvider.getSigner();
         const userAddress = await signer.getAddress();
@@ -471,7 +471,7 @@ export async function previewRedemption(
             const depositInWei = ethers.parseUnits(depositAmount.toString(), 6);
             sharesToRedeem = await vaultContract.convertToShares(depositInWei);
         }
-        
+
         console.log(`Preview for deposit ${depositAmount} USDC:`);
         console.log(`- Shares to redeem: ${sharesToRedeem.toString()}`);
 
@@ -488,7 +488,7 @@ export async function previewRedemption(
         // Preview how much USDC will be received for these specific shares
         const previewAssets = await vaultContract.previewRedeem(sharesToRedeem);
         const redeemedAmountUsdc = parseFloat(ethers.formatUnits(previewAssets, 6));
-        
+
         console.log(`- Will receive: ${redeemedAmountUsdc} USDC`);
 
         return { redeemableAmount: redeemedAmountUsdc, sharesToRedeem };
@@ -496,4 +496,79 @@ export async function previewRedemption(
         console.error("Error previewing redemption:", error);
         throw error;
     }
+}
+
+/**
+ * Calculate total allocated capital from portfolio
+ * @param portfolio - Array of lender portfolio items
+ * @returns The total amount invested across all vaults
+ */
+export function calculateAllocatedCapital(portfolio: LenderPortfolio[]): number {
+    const total = portfolio.reduce((sum, item) => {
+        const amount = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
+        return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+
+    // Round to 6 decimals (USDC precision)
+    return Math.round(total * 1e6) / 1e6;
+}
+
+/**
+ * Calculate realized gains from redeemed vaults
+ * @param portfolio - Array of lender portfolio items
+ * @returns The total gains from redeemed vaults (difference between redeemed amount and invested amount)
+ */
+export function calculateRealizedGains(portfolio: LenderPortfolio[]): number {
+    const redeemedVaults = portfolio.filter(item => item.status === 'REDEEMED');
+
+    const totalGains = redeemedVaults.reduce((sum, item) => {
+        const investedAmount = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
+        const redeemedAmount = item.redeemed_amount || 0;
+        const gain = redeemedAmount - investedAmount;
+        return sum + (isNaN(gain) ? 0 : gain);
+    }, 0);
+
+    // Round to 6 decimals (USDC precision)
+    return Math.round(totalGains * 1e6) / 1e6;
+}
+
+/**
+ * Calculate unrealized gains from active vaults
+ * @param portfolio - Array of lender portfolio items
+ * @returns The total accrued interest from active/repaid vaults that haven't been redeemed yet
+ */
+export function calculateUnrealizedGains(portfolio: LenderPortfolio[]): number {
+    // Filter for REPAID vaults where lender hasn't redeemed yet
+    const repaidVaults = portfolio.filter(item =>
+        item.status === 'REPAID' &&
+        item.lender_status === 'FUNDED'
+    );
+
+    const totalUnrealizedGains = repaidVaults.reduce((sum, item) => {
+        const investedAmount = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
+        const totalRepayments = typeof item.total_repayments === 'string' ? parseFloat(item.total_repayments) : item.total_repayments;
+        const vaultCapacity = typeof item.current_capacity === 'string' ? parseFloat(item.current_capacity) : item.current_capacity;
+
+        // Skip if no repayments yet or no capacity
+        if (!totalRepayments || !vaultCapacity || vaultCapacity === 0) {
+            return sum;
+        }
+
+        // Calculate lender's proportional share of total repayments
+        // lender_share = (invested_amount / vault_capacity) * total_repayments
+        const lenderShare = (investedAmount / vaultCapacity) * totalRepayments;
+
+        // Unrealized gain = lender's share - original investment
+        const unrealizedGain = lenderShare - investedAmount;
+
+        // Ensure result is a valid number and non-negative
+        if (isNaN(unrealizedGain) || !isFinite(unrealizedGain) || unrealizedGain < 0) {
+            return sum;
+        }
+
+        return sum + unrealizedGain;
+    }, 0);
+
+    // Round to 6 decimals (USDC precision)
+    return Math.round(totalUnrealizedGains * 1e6) / 1e6;
 }

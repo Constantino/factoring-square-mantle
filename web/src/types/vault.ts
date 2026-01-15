@@ -28,6 +28,10 @@ export interface LenderPortfolio {
     status: string;
     funded_at: string | null;
     fund_release_tx_hash: string | null;
+    fund_release_at?: string | null;
+    maturity_date?: string | null;
+    monthly_interest_rate?: number | null;
+    total_repayments?: string | null;
     lender_status: 'FUNDED' | 'REDEEMED';
     shares_amount?: string;
     redeemed_amount?: string;
