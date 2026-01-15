@@ -1,4 +1,4 @@
-import { GenerateInvoiceMetadataBody, InvoiceMetadata } from '../types/nft';
+import { GenerateInvoiceMetadataBody, InvoiceMetadata, MintInvoiceNFTBody } from '../types/nft';
 import { INVOICE_NFT_ADDRESS } from '../config/constants';
 import { validateWalletAddress } from './walletAddressValidator';
 
@@ -165,4 +165,30 @@ export const validateInvoiceNftAddress = (): string | null => {
  */
 export const validateRecipientAddress = (recipientAddress: unknown): string | null => {
     return validateWalletAddress(recipientAddress);
+};
+
+// Type for validation where all fields are unknown (before validation)
+type MintInvoiceNFTBodyForValidation = {
+    [K in keyof MintInvoiceNFTBody]: unknown;
+};
+
+/**
+ * Validates the entire MintInvoiceNFT request body
+ * @param data - The mint invoice NFT request body to validate
+ * @returns Error message string if validation fails, null if valid
+ */
+export const validateMintInvoiceNFTRequest = (data: MintInvoiceNFTBodyForValidation): string | null => {
+    // Validate metadata fields
+    const metadataError = validateRequest(data);
+    if (metadataError) {
+        return metadataError;
+    }
+
+    // Validate recipient address
+    const recipientAddressError = validateRecipientAddress(data.toAddress);
+    if (recipientAddressError) {
+        return recipientAddressError;
+    }
+
+    return null;
 };

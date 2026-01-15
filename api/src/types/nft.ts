@@ -30,6 +30,10 @@ export interface PinataUploadResult {
     pinataUrl: string;
 }
 
+export interface MintInvoiceNFTBody extends GenerateInvoiceMetadataBody {
+    toAddress: string;
+}
+
 export interface MintResult {
     tokenId: string;
     txHash: string;

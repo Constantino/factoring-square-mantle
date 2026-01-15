@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { GenerateInvoiceMetadataBody, InvoiceMetadata } from '../types/nft';
-import { validateRequest, validateInvoiceMetadata } from '../validators/nftValidator';
-import { sanitizeGenerateInvoiceMetadataRequest } from '../utils/sanitize';
+import { GenerateInvoiceMetadataBody, InvoiceMetadata, MintInvoiceNFTBody } from '../types/nft';
+import { validateRequest, validateInvoiceMetadata, validateMintInvoiceNFTRequest } from '../validators/nftValidator';
+import { sanitizeGenerateInvoiceMetadataRequest, sanitizeMintInvoiceNFTRequest } from '../utils/sanitize';
 import { invoiceNftService } from '../services/invoiceNftService';
 
 export const generateInvoiceMetadata = async (req: Request, res: Response): Promise<void> => {
@@ -76,6 +76,57 @@ export const uploadMetadataToPinata = async (req: Request, res: Response): Promi
 
         res.status(500).json({
             error: 'Failed to upload metadata to Pinata',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const mintInvoiceNFT = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Sanitize input data
+        const sanitizedData = sanitizeMintInvoiceNFTRequest(req.body as MintInvoiceNFTBody);
+
+        // Validate required fields
+        const validationError = validateMintInvoiceNFTRequest(sanitizedData);
+        if (validationError) {
+            res.status(400).json({
+                error: validationError
+            });
+            return;
+        }
+
+        // Extract toAddress and metadata params
+        const { toAddress, ...metadataParams } = sanitizedData;
+
+        // Mint the NFT using service
+        const result = await invoiceNftService.mintInvoiceNFT(metadataParams, toAddress);
+
+        res.status(200).json({
+            message: 'Invoice NFT minted successfully',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error minting invoice NFT:', error);
+
+        // Check for specific error types
+        if (error instanceof Error && error.message.includes('INVOICE_NFT_ADDRESS')) {
+            res.status(500).json({
+                error: 'Invoice NFT configuration error',
+                details: error.message
+            });
+            return;
+        }
+
+        if (error instanceof Error && error.message.includes('Wallet address')) {
+            res.status(400).json({
+                error: 'Invalid recipient address',
+                details: error.message
+            });
+            return;
+        }
+
+        res.status(500).json({
+            error: 'Failed to mint invoice NFT',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

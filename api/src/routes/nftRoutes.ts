@@ -6,5 +6,6 @@ const router: Router = express.Router();
 // NFT routes
 router.post('/invoice-metadata', nftController.generateInvoiceMetadata);
 router.post('/upload-metadata', nftController.uploadMetadataToPinata);
+router.post('/mint', nftController.mintInvoiceNFT);
 
 export default router;

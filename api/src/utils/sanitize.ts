@@ -1,6 +1,6 @@
 import { BorrowerKYBRequestBody } from '../models/borrowerKyb';
 import { LoanRequestBody } from '../models/loanRequest';
-import { GenerateInvoiceMetadataBody } from '../types/nft';
+import { GenerateInvoiceMetadataBody, MintInvoiceNFTBody } from '../types/nft';
 
 /**
  * Sanitizes a string by trimming, normalizing whitespace, and removing control characters
@@ -160,6 +160,16 @@ export const sanitizeGenerateInvoiceMetadataRequest = (data: GenerateInvoiceMeta
         borrowerName: sanitizeString(data.borrowerName, 255),
         loanRequestId: sanitizeInteger(data.loanRequestId),
         invoiceNumber: sanitizeString(data.invoiceNumber, 255),
+    };
+};
+
+/**
+ * Sanitizes the entire MintInvoiceNFT request body
+ */
+export const sanitizeMintInvoiceNFTRequest = (data: MintInvoiceNFTBody): MintInvoiceNFTBody => {
+    return {
+        ...sanitizeGenerateInvoiceMetadataRequest(data),
+        toAddress: sanitizeWalletAddress(data.toAddress),
     };
 };
 
