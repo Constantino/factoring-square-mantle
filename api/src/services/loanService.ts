@@ -67,6 +67,9 @@ export class LoanService {
                 lr.borrower_address,
                 lr.status,
                 lr.invoice_file_url,
+                lr.token_id,
+                lr.token_uri,
+                lr.token_address,
                 
                 -- Aggregated vault data with nested lenders and repayments
                 COALESCE(
