@@ -1,10 +1,11 @@
 "use client";
 
-import {usePrivy} from '@privy-io/react-auth';
+import Image from "next/image";
+import { usePrivy } from '@privy-io/react-auth';
 import Login from "@/components/auth/login";
 
 export default function Home() {
-    const {ready} = usePrivy();
+    const { ready } = usePrivy();
     if (!ready) {
         return <div>Loading...</div>;
     }
@@ -12,11 +13,21 @@ export default function Home() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black pt-16">
             <div className="flex flex-col items-center gap-4">
-                <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
+                <h1 className="max-w-xs text-4xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50 flex items-center gap-3">
                     Factoring Square
                 </h1>
+                <h2 className="text-xl font-normal leading-6 tracking-tight text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                    Bringing real-world invoice financing on-chain to tap into global DeFi liquidity
+                </h2>
+                <Image
+                    src="/invoice-image.png"
+                    alt="Factoring Square"
+                    width={150}
+                    height={150}
+                    className="object-contain"
+                />
 
-                <Login/>
+                <Login />
 
             </div>
         </div>
