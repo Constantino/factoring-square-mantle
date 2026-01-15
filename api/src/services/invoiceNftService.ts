@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { GenerateInvoiceMetadataBody, InvoiceMetadata, PinataUploadResult, PinataApiResponse, MintResult } from '../types/nft';
-import { INVOICE_NFT_INVOICE_IMAGE, PINATA_JWT, RPC_URL, PRIVATE_KEY, INVOICE_NFT_ADDRESS } from '../config/constants';
+import { INVOICE_NFT_INVOICE_IMAGE, PINATA_JWT, RPC_URL, PRIVATE_KEY, INVOICE_NFT_ADDRESS, EXPLORER_URL_BASE } from '../config/constants';
 import { sanitizeForFilename } from '../utils/sanitize';
 import { INVOICENFT_ABI } from '../abi/InvoiceNFT';
 import { validateInvoiceNftAddress, validateRecipientAddress } from '../validators/nftValidator';
@@ -123,11 +123,11 @@ export class InvoiceNftService {
 
     /**
      * Mints an NFT with the given metadata to the specified address
-     * @param metadata - The invoice metadata to mint
+     * @param data - The invoice metadata parameters to generate and mint
      * @param toAddress - The address to mint the NFT to
      * @returns Mint result with tokenId, transaction hash, and URLs
      */
-    public async mintInvoiceNFT(metadata: InvoiceMetadata, toAddress: string): Promise<MintResult> {
+    public async mintInvoiceNFT(data: GenerateInvoiceMetadataBody, toAddress: string): Promise<MintResult> {
         // Validate configuration and address
         const addressConfigError = validateInvoiceNftAddress();
         if (addressConfigError) {
@@ -140,7 +140,10 @@ export class InvoiceNftService {
         }
 
         try {
-            // First, upload metadata to Pinata to get the URI
+            // Generate the metadata from the provided parameters
+            const metadata = this.generateInvoiceMetadata(data);
+
+            // Upload metadata to Pinata to get the URI
             const pinataResult = await this.uploadMetadataToPinata(metadata);
             const uri = pinataResult.pinataUrl;
 
@@ -168,8 +171,8 @@ export class InvoiceNftService {
                 tokenId = (nextTokenId - 1n).toString();
             }
 
-            // Construct explorer URL (assuming Mantle network)
-            const explorerUrl = `https://sepolia.mantlescan.xyz/tx/${receipt.hash}`;
+            // Construct explorer URL
+            const explorerUrl = `${EXPLORER_URL_BASE}/tx/${receipt.hash}`;
 
             return {
                 tokenId,
