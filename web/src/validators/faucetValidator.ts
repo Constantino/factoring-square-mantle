@@ -1,4 +1,4 @@
-export const MAX_AMOUNT = 10000;
+export const MAX_AMOUNT = 100000000;
 
 export interface ValidationResult {
     isValid: boolean;

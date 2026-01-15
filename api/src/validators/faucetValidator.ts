@@ -48,8 +48,8 @@ const validateAmount = (amount: unknown): string | null => {
         return 'Amount must be greater than 0';
     }
 
-    if (amount > 10000) {
-        return 'Amount must be 10000 USDC or less';
+    if (amount > 100000000) {
+        return 'Amount must be 100000000 USDC or less';
     }
 
     return null;
