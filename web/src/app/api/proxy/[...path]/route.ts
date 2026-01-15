@@ -16,10 +16,11 @@ const FORMATTED_API_URL = formatApiUrl(API_BASE_URL);
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
-        const path = params.path.join('/');
+        const { path: pathArray } = await params;
+        const path = pathArray.join('/');
         const searchParams = request.nextUrl.searchParams.toString();
         const url = `${FORMATTED_API_URL}/${path}${searchParams ? `?${searchParams}` : ''}`;
 
@@ -44,11 +45,12 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
-        const path = params.path.join('/');
-        const url = `${API_BASE_URL}/${path}`;
+        const { path: pathArray } = await params;
+        const path = pathArray.join('/');
+        const url = `${FORMATTED_API_URL}/${path}`;
 
         // Check if request is multipart/form-data
         const contentType = request.headers.get('content-type') || '';
@@ -88,11 +90,12 @@ export async function POST(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
-        const path = params.path.join('/');
-        const url = `${API_BASE_URL}/${path}`;
+        const { path: pathArray } = await params;
+        const path = pathArray.join('/');
+        const url = `${FORMATTED_API_URL}/${path}`;
         const body = await request.json();
 
         const response = await fetch(url, {
@@ -117,11 +120,12 @@ export async function PUT(
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
-        const path = params.path.join('/');
-        const url = `${API_BASE_URL}/${path}`;
+        const { path: pathArray } = await params;
+        const path = pathArray.join('/');
+        const url = `${FORMATTED_API_URL}/${path}`;
         const body = await request.json();
 
         const response = await fetch(url, {
@@ -146,11 +150,12 @@ export async function PATCH(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { path: string[] } }
+    { params }: { params: Promise<{ path: string[] }> }
 ) {
     try {
-        const path = params.path.join('/');
-        const url = `${API_BASE_URL}/${path}`;
+        const { path: pathArray } = await params;
+        const path = pathArray.join('/');
+        const url = `${FORMATTED_API_URL}/${path}`;
 
         const response = await fetch(url, {
             method: 'DELETE',
