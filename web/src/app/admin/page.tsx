@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
 import { PlatformPerformanceAreaChart } from "@/components/platform-performance-area-chart";
@@ -31,6 +30,7 @@ export default function AdminPage() {
 
     useEffect(() => {
         fetchLoanRequests();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchLoanRequests = async () => {
@@ -81,12 +81,6 @@ export default function AdminPage() {
         router.push(`/borrowers/loans/${requestId}`);
     };
 
-    // Dummy calculations
-    const totalDebt = 125000;
-    const totalInterest = 8750;
-    const totalCapital = 121750;
-    const creditScore = 750;
-
     // Generate dummy monthly data for the past 12 months
     // Based on realistic values for a healthy factoring company
     const generateMonthlyData = () => {
@@ -95,7 +89,6 @@ export default function AdminPage() {
 
         // Starting values for a healthy factoring company
         const startingCollateral = 2500000; // $2.5M in collateral
-        const advanceRate = 0.8; // 78% advance rate (typical for factoring)
         const monthlyGrowthRate = 0.06; // 6% monthly growth (healthy but sustainable)
         const realizedYieldRate = 0.015; // 1.5% monthly yield (realized)
         const unrealizedYieldRate = 0.014; // 1.4% monthly yield (unrealized)

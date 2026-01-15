@@ -37,6 +37,7 @@ export default function LenderLoansPage() {
         } else {
             setPortfolio([]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [walletAddress]);
 
     const fetchPortfolioData = async () => {

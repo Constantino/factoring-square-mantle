@@ -28,6 +28,7 @@ export default function LoanRequestDetailPage() {
         if (loanId) {
             fetchLoanDetail();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loanId]);
 
     const fetchLoanDetail = async () => {
@@ -99,7 +100,7 @@ export default function LoanRequestDetailPage() {
             setError(null);
 
             const apiUrl = getApiUrl();
-            const response = await axios.post(
+            await axios.post(
                 `${apiUrl}/loan-requests/${loanDetail.id}/approve`
             );
 

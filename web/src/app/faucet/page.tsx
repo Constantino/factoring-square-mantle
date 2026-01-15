@@ -5,7 +5,13 @@ import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { getApiUrl } from "@/lib/api";
+import {
+    validateMintRequest,
+    isValidIntegerInput,
+    isWithinMaxLimit,
+    MAX_AMOUNT
+} from "@/validators/faucetValidator";
 
 export default function FaucetPage() {
     const [walletAddress, setWalletAddress] = useState("");
@@ -18,14 +24,6 @@ export default function FaucetPage() {
         amount: number;
     } | null>(null);
 
-    const MAX_AMOUNT = 10000;
-
-    const validateAddress = (address: string): boolean => {
-        // Basic Ethereum address validation
-        const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
-        return ethAddressRegex.test(address);
-    };
-
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
 
@@ -35,13 +33,9 @@ export default function FaucetPage() {
             return;
         }
 
-        // Only allow integers (no decimals)
-        if (/^\d+$/.test(value)) {
-            const numValue = parseInt(value, 10);
-            // Enforce max limit
-            if (numValue <= MAX_AMOUNT) {
-                setAmount(value);
-            }
+        // Only allow integers (no decimals) and enforce max limit
+        if (isValidIntegerInput(value) && isWithinMaxLimit(value)) {
+            setAmount(value);
         }
     };
 
@@ -51,40 +45,18 @@ export default function FaucetPage() {
         setSubmitError(null);
         setSubmitSuccess(null);
 
-        // Validate wallet address
-        if (!validateAddress(walletAddress)) {
-            setSubmitError("Please enter a valid Ethereum wallet address");
+        // Validate request
+        const validation = validateMintRequest(walletAddress, amount);
+        if (!validation.isValid) {
+            setSubmitError(validation.error || "Validation failed");
             setIsSubmitting(false);
             return;
         }
 
-        // Validate amount
         const amountNum = parseInt(amount, 10);
-        if (!amount || isNaN(amountNum) || amountNum <= 0) {
-            setSubmitError("Please enter a valid amount");
-            setIsSubmitting(false);
-            return;
-        }
-
-        if (amountNum > MAX_AMOUNT) {
-            setSubmitError(`Maximum amount is ${MAX_AMOUNT} USDC`);
-            setIsSubmitting(false);
-            return;
-        }
 
         try {
-            let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            if (!apiUrl) {
-                throw new Error("NEXT_PUBLIC_API_URL is not configured");
-            }
-
-            // Ensure the URL has a protocol
-            if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://")) {
-                apiUrl = `http://${apiUrl}`;
-            }
-
-            // Remove trailing slash if present
-            apiUrl = apiUrl.replace(/\/$/, "");
+            const apiUrl = getApiUrl();
 
             const response = await axios.post(`${apiUrl}/faucet`, {
                 address: walletAddress,

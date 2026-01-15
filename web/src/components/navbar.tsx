@@ -108,7 +108,7 @@ const Navbar = () => {
 
     // Blur button when dropdown closes and handle global clicks
     useEffect(() => {
-        const handleDocumentClick = (e: MouseEvent) => {
+        const handleDocumentClick = () => {
             // If dropdown is closed and we click anywhere, blur the trigger
             if (!isDropdownOpen) {
                 const triggerButton = document.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLButtonElement;
