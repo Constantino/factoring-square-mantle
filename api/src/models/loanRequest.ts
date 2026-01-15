@@ -33,5 +33,6 @@ export interface LoanRequest {
     borrower_address: string;
     status: LoanStatus;
     invoice_file_url?: string | null;
+    legal_business_name?: string | null;
 }
 
