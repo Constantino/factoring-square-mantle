@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
+import { getApiUrl } from "@/lib/api";
 
 export default function BorrowerKYBPage() {
+    const router = useRouter();
     const { walletAddress, walletsReady, privyReady } = useWalletAddress();
     const [formData, setFormData] = useState({
         legalBusinessName: "",
@@ -20,6 +23,31 @@ export default function BorrowerKYBPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [isCheckingKYB, setIsCheckingKYB] = useState(false);
+
+    // Check if borrower already has KYB
+    useEffect(() => {
+        const checkExistingKYB = async () => {
+            if (!walletAddress || !walletsReady || !privyReady) return;
+
+            setIsCheckingKYB(true);
+            try {
+                const apiUrl = getApiUrl();
+                const response = await axios.get(`${apiUrl}/borrowers/kybs/check/${walletAddress}`);
+
+                if (response.data.hasKYB) {
+                    // If KYB already exists, redirect to loan request page
+                    router.push('/loan-request');
+                }
+            } catch (error) {
+                console.error('Error checking existing KYB:', error);
+            } finally {
+                setIsCheckingKYB(false);
+            }
+        };
+
+        checkExistingKYB();
+    }, [walletAddress, walletsReady, privyReady, router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -71,15 +99,10 @@ export default function BorrowerKYBPage() {
             setSubmitSuccess(true);
             console.log("KYB submitted successfully:", response.data);
 
-            // Reset form after successful submission
-            setFormData({
-                legalBusinessName: "",
-                countryOfIncorporation: "",
-                businessRegistrationNumber: "",
-                businessDescription: "",
-                uboFullName: "",
-                averageInvoiceAmount: "",
-            });
+            // Redirect to loan request page after successful submission
+            setTimeout(() => {
+                router.push('/loan-request');
+            }, 1500);
         } catch (error) {
             console.error("Error submitting KYB:", error);
             if (axios.isAxiosError(error)) {
@@ -96,6 +119,19 @@ export default function BorrowerKYBPage() {
             setIsSubmitting(false);
         }
     };
+
+    // Show loading state while checking for existing KYB
+    if (isCheckingKYB) {
+        return (
+            <div className="w-full p-8">
+                <div className="max-w-3xl mx-auto">
+                    <div className="flex items-center justify-center py-12">
+                        <p className="text-muted-foreground">Checking KYB status...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full p-8">

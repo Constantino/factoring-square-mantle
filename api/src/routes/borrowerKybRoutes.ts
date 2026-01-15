@@ -5,6 +5,7 @@ const router: Router = express.Router();
 
 // Borrower KYB routes
 router.post('/', borrowerKybController.createBorrowerKYB);
+router.get('/check/:walletAddress', borrowerKybController.checkBorrowerKYB);
 
 export default router;
 
