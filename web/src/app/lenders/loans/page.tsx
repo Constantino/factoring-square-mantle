@@ -4,10 +4,19 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useWallets } from "@privy-io/react-auth";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PortfolioTable } from "@/components/portfolio-table";
 import { RedeemModal } from "@/components/redeem-modal";
 import { LenderPortfolio } from "@/types/vault";
-import { fetchLenderPortfolio, redeemShares, previewRedemption } from "@/services/vault";
+import {
+    fetchLenderPortfolio,
+    redeemShares,
+    previewRedemption,
+    calculateAllocatedCapital,
+    calculateRealizedGains,
+    calculateUnrealizedGains
+} from "@/services/vault";
+import { formatCurrency } from "@/lib/format";
 
 export default function LenderLoansPage() {
     const { walletAddress } = useWalletAddress();
@@ -37,6 +46,7 @@ export default function LenderLoansPage() {
         } else {
             setPortfolio([]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [walletAddress]);
 
     const fetchPortfolioData = async () => {
@@ -159,11 +169,67 @@ export default function LenderLoansPage() {
         }
     };
 
+    // Calculate dashboard metrics
+    const allocatedCapital = calculateAllocatedCapital(portfolio);
+    const realizedGains = calculateRealizedGains(portfolio);
+    const unrealizedGains = calculateUnrealizedGains(portfolio);
+
     return (
         <div className="w-full p-8">
             <div className="max-w-7xl mx-auto space-y-6">
                 <div>
                     <h1 className="text-4xl font-bold mb-4 text-foreground">Portfolio</h1>
+                </div>
+
+                {/* Dashboard Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Allocated Capital
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-foreground">
+                                {formatCurrency(allocatedCapital)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Total invested across all vaults
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Gains (Realized)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-green-600">
+                                {formatCurrency(realizedGains)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Interest earned from redeemed vaults
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Unrealized Gains
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-blue-600">
+                                {formatCurrency(unrealizedGains)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Accrued interest not yet redeemed
+                            </p>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Portfolio Table */}

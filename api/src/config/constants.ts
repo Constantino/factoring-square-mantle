@@ -7,6 +7,7 @@ export const PRIVATE_KEY: string = process.env.PRIVATE_KEY || '';
 export const VAULT_FACTORY_ADDRESS: string = process.env.VAULT_FACTORY_ADDRESS || '';
 export const TREASURY_ADDRESS: string = process.env.TREASURY_ADDRESS || '';
 export const EXPLORER_URL_BASE: string = process.env.EXPLORER_URL_BASE || 'https://sepolia.mantlescan.xyz';
+export const USDC_ADDRESS: string = process.env.USDC_ADDRESS || '';
 
 // Supabase S3 Configuration
 export const SUPABASE_BUCKET_ENDPOINT: string = process.env.SUPABASE_BUCKET_ENDPOINT || '';

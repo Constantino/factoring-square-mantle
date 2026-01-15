@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { formatCurrency } from "@/lib/format";
 
 interface MonthlyData {
@@ -20,6 +20,7 @@ interface PlatformPerformanceAreaChartProps {
 export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaChartProps) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+    const [tooltipStyle, setTooltipStyle] = useState<{ left: number; top: number; transform: string } | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
@@ -57,7 +58,7 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
     };
 
     // Create path for area chart
-    const createAreaPath = (values: number[], color: string) => {
+    const createAreaPath = (values: number[]) => {
         let path = `M ${padding.left} ${padding.top + chartHeight} `;
 
         values.forEach((value, index) => {
@@ -110,11 +111,9 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
 
         // Get SVG viewBox scale factor if SVG is scaled
         const svgScaleX = svgRect.width / width;
-        const svgScaleY = svgRect.height / height;
 
         // Convert mouse position to SVG coordinates (accounting for viewBox scaling)
         const mouseX = (e.clientX - svgRect.left) / svgScaleX;
-        const mouseY = (e.clientY - svgRect.top) / svgScaleY;
 
         // Check if mouse is within chart area
         if (mouseX < padding.left || mouseX > padding.left + chartWidth) {
@@ -124,7 +123,6 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
         }
 
         // Find closest data point by calculating distance to each point's X position
-        const relativeX = mouseX - padding.left;
         let closestIndex = 0;
         let minDistance = Infinity;
 
@@ -153,6 +151,50 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
     // Get hovered data point
     const hoveredData = hoveredIndex !== null ? data[hoveredIndex] : null;
     const hoveredMonth = hoveredData ? new Date(hoveredData.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null;
+
+    // Calculate tooltip position in useEffect to avoid accessing refs during render
+    useEffect(() => {
+        if (tooltipPosition && containerRef.current) {
+            const tooltipWidth = 220;
+            const tooltipHeight = 150;
+            const containerWidth = containerRef.current.clientWidth;
+            const containerHeight = containerRef.current.clientHeight;
+
+            // Determine if tooltip should be on left or right of cursor
+            const spaceOnRight = containerWidth - tooltipPosition.x;
+            const spaceOnLeft = tooltipPosition.x;
+            const showOnLeft = spaceOnRight < tooltipWidth && spaceOnLeft > tooltipWidth;
+
+            // Calculate horizontal position
+            let left: number;
+            if (showOnLeft) {
+                left = tooltipPosition.x - tooltipWidth - 10;
+            } else {
+                left = Math.min(tooltipPosition.x + 15, containerWidth - tooltipWidth - 10);
+            }
+            left = Math.max(10, left);
+
+            // Calculate vertical position
+            const spaceAbove = tooltipPosition.y;
+            const spaceBelow = containerHeight - tooltipPosition.y;
+            const showAbove = spaceBelow < tooltipHeight && spaceAbove > tooltipHeight;
+
+            let top: number;
+            let transform = '';
+            if (showAbove) {
+                top = tooltipPosition.y - tooltipHeight - 10;
+                transform = 'translateY(-100%)';
+            } else {
+                top = tooltipPosition.y + 10;
+                transform = 'translateY(0)';
+            }
+            top = Math.max(10, Math.min(top, containerHeight - tooltipHeight - 10));
+
+            setTooltipStyle({ left, top, transform });
+        } else {
+            setTooltipStyle(null);
+        }
+    }, [tooltipPosition]);
 
     return (
         <div ref={containerRef} className="w-full overflow-x-auto relative">
@@ -185,22 +227,22 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
 
                 {/* Area fills (drawn in order, bottom to top) */}
                 <path
-                    d={createAreaPath(realizedData, colors.realizedYield)}
+                    d={createAreaPath(realizedData)}
                     fill={colors.realizedYield}
                     fillOpacity="0.2"
                 />
                 <path
-                    d={createAreaPath(unrealizedData, colors.unrealizedYield)}
+                    d={createAreaPath(unrealizedData)}
                     fill={colors.unrealizedYield}
                     fillOpacity="0.2"
                 />
                 <path
-                    d={createAreaPath(recoveryData, colors.delinquentRecovery)}
+                    d={createAreaPath(recoveryData)}
                     fill={colors.delinquentRecovery}
                     fillOpacity="0.2"
                 />
                 <path
-                    d={createAreaPath(feeData, colors.managementFeeIncome)}
+                    d={createAreaPath(feeData)}
                     fill={colors.managementFeeIncome}
                     fillOpacity="0.2"
                 />
@@ -337,81 +379,43 @@ export function PlatformPerformanceAreaChart({ data }: PlatformPerformanceAreaCh
             </svg>
 
             {/* Tooltip */}
-            {hoveredIndex !== null && hoveredData && tooltipPosition && (() => {
-                // Calculate tooltip position to stay within container bounds
-                const tooltipWidth = 220; // Approximate tooltip width
-                const tooltipHeight = 150; // Approximate tooltip height
-                const containerWidth = containerRef.current?.clientWidth || width;
-                const containerHeight = containerRef.current?.clientHeight || height;
-
-                // Determine if tooltip should be on left or right of cursor
-                const spaceOnRight = containerWidth - tooltipPosition.x;
-                const spaceOnLeft = tooltipPosition.x;
-                const showOnLeft = spaceOnRight < tooltipWidth && spaceOnLeft > tooltipWidth;
-
-                // Calculate horizontal position
-                let left: number;
-                if (showOnLeft) {
-                    left = tooltipPosition.x - tooltipWidth - 10; // Show to the left
-                } else {
-                    left = Math.min(tooltipPosition.x + 15, containerWidth - tooltipWidth - 10);
-                }
-                left = Math.max(10, left); // Ensure it doesn't go off left edge
-
-                // Calculate vertical position
-                const spaceAbove = tooltipPosition.y;
-                const spaceBelow = containerHeight - tooltipPosition.y;
-                const showAbove = spaceBelow < tooltipHeight && spaceAbove > tooltipHeight;
-
-                let top: number;
-                let transform = '';
-                if (showAbove) {
-                    top = tooltipPosition.y - tooltipHeight - 10;
-                    transform = 'translateY(-100%)';
-                } else {
-                    top = tooltipPosition.y + 10;
-                    transform = 'translateY(0)';
-                }
-                top = Math.max(10, Math.min(top, containerHeight - tooltipHeight - 10));
-
-                return (
-                    <div
-                        ref={tooltipRef}
-                        className="absolute bg-background border border-border rounded-lg shadow-lg p-3 z-50 pointer-events-none min-w-[200px]"
-                        style={{
-                            left: `${left}px`,
-                            top: `${top}px`,
-                            transform: transform,
-                        }}
-                    >
-                        <div className="text-xs font-semibold text-foreground mb-2 border-b border-border pb-1">
-                            {hoveredMonth}
+            {hoveredIndex !== null && hoveredData && tooltipStyle && (
+                <div
+                    ref={tooltipRef}
+                    className="absolute bg-background border border-border rounded-lg shadow-lg p-3 z-50 pointer-events-none min-w-[200px]"
+                    style={{
+                        left: `${tooltipStyle.left}px`,
+                        top: `${tooltipStyle.top}px`,
+                        transform: tooltipStyle.transform,
+                    }}
+                >
+                    <div className="text-xs font-semibold text-foreground mb-2 border-b border-border pb-1">
+                        {hoveredMonth}
+                    </div>
+                    <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.realizedYield }} />
+                            <span className="text-muted-foreground">Realized Yield:</span>
+                            <span className="font-medium text-foreground">{formatCurrency(hoveredData.realizedYield)}</span>
                         </div>
-                        <div className="space-y-1 text-xs">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.realizedYield }} />
-                                <span className="text-muted-foreground">Realized Yield:</span>
-                                <span className="font-medium text-foreground">{formatCurrency(hoveredData.realizedYield)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.unrealizedYield }} />
-                                <span className="text-muted-foreground">Unrealized Yield:</span>
-                                <span className="font-medium text-foreground">{formatCurrency(hoveredData.unrealizedYield)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.delinquentRecovery }} />
-                                <span className="text-muted-foreground">Delinquent Recovery:</span>
-                                <span className="font-medium text-foreground">{formatCurrency(hoveredData.delinquentRecovery)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.managementFeeIncome }} />
-                                <span className="text-muted-foreground">Management Fee:</span>
-                                <span className="font-medium text-foreground">{formatCurrency(hoveredData.managementFeeIncome)}</span>
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.unrealizedYield }} />
+                            <span className="text-muted-foreground">Unrealized Yield:</span>
+                            <span className="font-medium text-foreground">{formatCurrency(hoveredData.unrealizedYield)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.delinquentRecovery }} />
+                            <span className="text-muted-foreground">Delinquent Recovery:</span>
+                            <span className="font-medium text-foreground">{formatCurrency(hoveredData.delinquentRecovery)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.managementFeeIncome }} />
+                            <span className="text-muted-foreground">Management Fee:</span>
+                            <span className="font-medium text-foreground">{formatCurrency(hoveredData.managementFeeIncome)}</span>
                         </div>
                     </div>
-                );
-            })()}
+                </div>
+            )}
 
             {/* Legend */}
             <div className="grid grid-cols-2 gap-1.5 mt-3 text-xs">

@@ -10,6 +10,11 @@ export interface VaultLender {
     amount: string;
     tx_hash: string;
     created_at: string;
+    status?: 'FUNDED' | 'REDEEMED';
+    shares_amount?: string;
+    redeemed_amount?: string;
+    redemption_tx_hash?: string;
+    redeemed_at?: string;
 }
 
 /**
