@@ -475,40 +475,6 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Validate TREASURY_ADDRESS is configured
-        const treasuryAddressError = validateTreasuryAddress();
-        if (treasuryAddressError) {
-            res.status(500).json({
-                error: treasuryAddressError
-            });
-            return;
-        }
-
-        // Mint invoice NFT
-        const borrowerName = loanRequest.legal_business_name || loanRequest.customer_name;
-        const nftMetadata = {
-            name: `Invoice - ${borrowerName} - ${loanRequest.invoice_number}`,
-            description: `Invoice NFT for invoice ${loanRequest.invoice_number} from ${borrowerName}`,
-            borrowerName: borrowerName,
-            loanRequestId: loanRequest.id,
-            invoiceNumber: loanRequest.invoice_number
-        };
-
-        let nftResult;
-        try {
-            nftResult = await invoiceNftService.mintInvoiceNFT(nftMetadata, TREASURY_ADDRESS);
-
-            // Small delay to ensure network has updated nonce after NFT mint
-            // This helps prevent nonce conflicts when creating the vault
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        } catch (error) {
-            console.error('Error minting invoice NFT:', error);
-            res.status(500).json({
-                error: 'Failed to mint invoice NFT',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            });
-            return;
-        }
 
         // Change loan status to LISTED
         await loanService.changeLoanStatus(loanRequestId, LoanStatus.LISTED);
@@ -531,7 +497,6 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
             data: {
                 loanRequestId: loanRequest.id,
                 status: LoanStatus.LISTED,
-                nft: nftResult,
                 vault: vaultResult
             }
         });

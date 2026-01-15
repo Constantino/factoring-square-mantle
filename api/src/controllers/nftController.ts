@@ -1,8 +1,12 @@
 import { Request, Response } from 'express';
 import { GenerateInvoiceMetadataBody, InvoiceMetadata, MintInvoiceNFTBody } from '../types/nft';
-import { validateRequest, validateInvoiceMetadata, validateMintInvoiceNFTRequest } from '../validators/nftValidator';
+import { validateRequest, validateInvoiceMetadata, validateMintInvoiceNFTRequest, validateTreasuryAddress } from '../validators/nftValidator';
 import { sanitizeGenerateInvoiceMetadataRequest, sanitizeMintInvoiceNFTRequest } from '../utils/sanitize';
 import { invoiceNftService } from '../services/invoiceNftService';
+import { pool } from '../config/database';
+import { LoanRequest } from '../models/loanRequest';
+import { TREASURY_ADDRESS } from '../config/constants';
+import { validateLoanId } from '../validators/loanRequestValidators';
 
 export const generateInvoiceMetadata = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -99,7 +103,7 @@ export const mintInvoiceNFT = async (req: Request, res: Response): Promise<void>
         const { toAddress, ...metadataParams } = sanitizedData;
 
         // Mint the NFT using service
-        const result = await invoiceNftService.mintInvoiceNFT(metadataParams, toAddress);
+        const result = await invoiceNftService.mintInvoiceNFT(metadataParams);
 
         res.status(200).json({
             message: 'Invoice NFT minted successfully',
@@ -127,6 +131,104 @@ export const mintInvoiceNFT = async (req: Request, res: Response): Promise<void>
 
         res.status(500).json({
             error: 'Failed to mint invoice NFT',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+export const tokenizeInvoice = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { loanRequestId } = req.params;
+
+        // Validate loanRequestId
+        const validationError = validateLoanId(loanRequestId);
+        if (validationError) {
+            res.status(400).json({
+                error: validationError
+            });
+            return;
+        }
+
+        const id = parseInt(loanRequestId as string, 10);
+
+        // Get loan request details with borrower KYB information
+        const query = `
+            SELECT 
+                lr.id,
+                lr.invoice_number,
+                lr.invoice_amount,
+                lr.invoice_due_date,
+                lr.customer_name,
+                lr.borrower_address,
+                lr.max_loan,
+                lr.status,
+                bkyb.legal_business_name
+            FROM "LoanRequests" lr
+            LEFT JOIN "BorrowerKYBs" bkyb ON lr.borrower_address = bkyb.wallet_address
+            WHERE lr.id = $1
+        `;
+
+        const result = await pool.query<LoanRequest>(query, [id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({
+                error: 'Loan request not found'
+            });
+            return;
+        }
+
+        const loanRequest = result.rows[0];
+
+        // Build metadata from loan request data
+        const borrowerName = loanRequest.legal_business_name || loanRequest.customer_name;
+        const nftMetadata: GenerateInvoiceMetadataBody = {
+            name: `Invoice - ${borrowerName} - ${loanRequest.invoice_number}`,
+            description: `Invoice NFT for invoice ${loanRequest.invoice_number} from ${borrowerName}`,
+            borrowerName: borrowerName,
+            loanRequestId: loanRequest.id,
+            invoiceNumber: loanRequest.invoice_number
+        };
+
+        // Mint the NFT to the Treasury address
+        const mintResult = await invoiceNftService.mintInvoiceNFT(nftMetadata);
+
+        res.status(200).json({
+            message: 'Invoice tokenized successfully',
+            data: {
+                loanRequestId: loanRequest.id,
+                nft: mintResult
+            }
+        });
+    } catch (error) {
+        console.error('Error tokenizing invoice:', error);
+
+        // Check for specific error types
+        if (error instanceof Error && error.message.includes('INVOICE_NFT_ADDRESS')) {
+            res.status(500).json({
+                error: 'Invoice NFT configuration error',
+                details: error.message
+            });
+            return;
+        }
+
+        if (error instanceof Error && error.message.includes('TREASURY_ADDRESS')) {
+            res.status(500).json({
+                error: 'Treasury address configuration error',
+                details: error.message
+            });
+            return;
+        }
+
+        if (error instanceof Error && error.message.includes('Wallet address')) {
+            res.status(400).json({
+                error: 'Invalid wallet address',
+                details: error.message
+            });
+            return;
+        }
+
+        res.status(500).json({
+            error: 'Failed to tokenize invoice',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

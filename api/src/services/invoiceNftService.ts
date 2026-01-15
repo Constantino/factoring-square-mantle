@@ -3,7 +3,7 @@ import { GenerateInvoiceMetadataBody, InvoiceMetadata, PinataUploadResult, Pinat
 import { INVOICE_NFT_INVOICE_IMAGE, PINATA_JWT, RPC_URL, PRIVATE_KEY, INVOICE_NFT_ADDRESS, EXPLORER_URL_BASE } from '../config/constants';
 import { sanitizeForFilename } from '../utils/sanitize';
 import { INVOICENFT_ABI } from '../abi/InvoiceNFT';
-import { validateInvoiceNftAddress, validateRecipientAddress } from '../validators/nftValidator';
+import { validateInvoiceNftAddress } from '../validators/nftValidator';
 import { pool } from '../config/database';
 
 export class InvoiceNftService {
@@ -128,19 +128,32 @@ export class InvoiceNftService {
      * @param toAddress - The address to mint the NFT to
      * @returns Mint result with tokenId, transaction hash, and URLs
      */
-    public async mintInvoiceNFT(data: GenerateInvoiceMetadataBody, toAddress: string): Promise<MintResult> {
+    public async mintInvoiceNFT(data: GenerateInvoiceMetadataBody): Promise<MintResult> {
         // Validate configuration and address
         const addressConfigError = validateInvoiceNftAddress();
         if (addressConfigError) {
             throw new Error(addressConfigError);
         }
 
-        const recipientAddressError = validateRecipientAddress(toAddress);
-        if (recipientAddressError) {
-            throw new Error(recipientAddressError);
-        }
+        // Use wallet address instead of the provided toAddress
+        const recipientAddress = this.wallet.address;
 
         try {
+            // Verify that the wallet is the owner of the contract
+            const contractOwner = await this.invoiceNftContract.owner();
+            const walletAddress = this.wallet.address;
+            console.log(`[InvoiceNFT] Checking ownership - Wallet: ${walletAddress}, Contract Owner: ${contractOwner}`);
+
+            if (contractOwner.toLowerCase() !== walletAddress.toLowerCase()) {
+                throw new Error(
+                    `Wallet address ${walletAddress} is not the owner of the InvoiceNFT contract. ` +
+                    `Contract owner is ${contractOwner}. Please ensure PRIVATE_KEY corresponds to the contract owner, ` +
+                    `or transfer ownership to this wallet address.`
+                );
+            }
+
+            console.log(`[InvoiceNFT] Ownership verified. Proceeding with mint...`);
+
             // Generate the metadata from the provided parameters
             const metadata = this.generateInvoiceMetadata(data);
 
@@ -148,8 +161,21 @@ export class InvoiceNftService {
             const pinataResult = await this.uploadMetadataToPinata(metadata);
             const uri = pinataResult.pinataUrl;
 
-            // Mint the NFT using the Pinata URL as the token URI
-            const tx = await this.invoiceNftContract.mint(toAddress, uri);
+            // Double-check ownership right before minting (in case something changed)
+            const finalOwnerCheck = await this.invoiceNftContract.owner();
+            if (finalOwnerCheck.toLowerCase() !== this.wallet.address.toLowerCase()) {
+                throw new Error(
+                    `Ownership changed! Wallet ${this.wallet.address} is no longer the owner. ` +
+                    `Current owner is ${finalOwnerCheck}.`
+                );
+            }
+
+            console.log(`[InvoiceNFT] Minting to wallet address: ${recipientAddress}`);
+            console.log(`[InvoiceNFT] URI: ${uri}`);
+
+            // Mint the NFT using the Pinata URL as the token URI to the wallet address
+            const tx = await this.invoiceNftContract.mint(recipientAddress, uri);
+            console.log(`[InvoiceNFT] Mint transaction sent: ${tx.hash}`);
             const receipt = await tx.wait();
 
             // Extract tokenId from the InvoiceMinted event
@@ -194,12 +220,46 @@ export class InvoiceNftService {
             return {
                 tokenId,
                 txHash: receipt.hash,
-                toAddress,
+                toAddress: recipientAddress,
                 uri,
                 explorerUrl
             };
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error minting invoice NFT:', error);
+
+            // Try to decode the OwnableUnauthorizedAccount error
+            if (error.data && typeof error.data === 'string' && error.data.startsWith('0x64a0ae92')) {
+                // Extract the unauthorized account address from the error data
+                // Format: 0x64a0ae92 (selector) + 32 bytes (padded address)
+                const unauthorizedAddress = '0x' + error.data.slice(10, 74); // Skip selector (10 chars) and get address (64 chars)
+                const walletAddress = this.wallet.address;
+
+                console.error(`[InvoiceNFT] OwnableUnauthorizedAccount error detected:`);
+                console.error(`  - Wallet address: ${walletAddress}`);
+                console.error(`  - Unauthorized account in error: ${unauthorizedAddress}`);
+                console.error(`  - Contract address: ${INVOICE_NFT_ADDRESS}`);
+
+                // Check if the unauthorized address is the recipient (wallet address)
+                if (unauthorizedAddress.toLowerCase() === recipientAddress.toLowerCase()) {
+                    throw new Error(
+                        `OwnableUnauthorizedAccount: The recipient address ${recipientAddress} appears in the error, ` +
+                        `but this shouldn't affect ownership. The wallet ${walletAddress} should be the owner. ` +
+                        `Please verify the contract owner matches the wallet address.`
+                    );
+                }
+
+                throw new Error(
+                    `OwnableUnauthorizedAccount: The wallet address ${walletAddress} is not authorized. ` +
+                    `Unauthorized account in error: ${unauthorizedAddress}. ` +
+                    `Please verify that PRIVATE_KEY corresponds to the contract owner.`
+                );
+            }
+
+            // If it's a known error with a reason, include it
+            if (error.reason) {
+                throw new Error(`Failed to mint invoice NFT: ${error.reason}`);
+            }
+
             throw error;
         }
     }
