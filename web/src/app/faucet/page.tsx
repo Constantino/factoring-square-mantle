@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
+import { useWalletAddress } from "@/hooks/use-wallet-address";
 import {
     validateMintRequest,
     isValidIntegerInput,
@@ -14,6 +15,7 @@ import {
 } from "@/validators/faucetValidator";
 
 export default function FaucetPage() {
+    const { walletAddress: connectedWalletAddress } = useWalletAddress();
     const [walletAddress, setWalletAddress] = useState("");
     const [amount, setAmount] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +25,13 @@ export default function FaucetPage() {
         explorerUrl?: string;
         amount: number;
     } | null>(null);
+
+    // Auto-populate wallet address if connected
+    useEffect(() => {
+        if (connectedWalletAddress && !walletAddress) {
+            setWalletAddress(connectedWalletAddress);
+        }
+    }, [connectedWalletAddress, walletAddress]);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -128,7 +137,7 @@ export default function FaucetPage() {
                             type="text"
                             value={amount}
                             onChange={handleAmountChange}
-                            placeholder="Enter amount (max 10,000)"
+                            placeholder="Enter amount (max 100,000,000)"
                             required
                         />
                         <p className="text-xs text-muted-foreground">
