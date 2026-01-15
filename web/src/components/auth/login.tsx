@@ -21,7 +21,7 @@ export default function Login() {
                 email: user.email?.address
             });
             
-            router.push('/users');
+            router.push('/borrowers/loans');
         },
         onError: (error) => {
             console.error('Login failed', error);
