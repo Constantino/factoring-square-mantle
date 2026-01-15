@@ -141,6 +141,16 @@ deploy-mock-usdc:
 			fi; \
 			echo "✓ Updated ../api/.env with Mock USDC address: $$MOCK_USDC_ADDRESS"; \
 		fi; \
+		if [ -f "../web/.env" ]; then \
+			if grep -q "NEXT_PUBLIC_USDC_ADDRESS=" ../web/.env; then \
+				grep -v "NEXT_PUBLIC_USDC_ADDRESS=" ../web/.env > ../web/.env.tmp && \
+				echo "NEXT_PUBLIC_USDC_ADDRESS=$$MOCK_USDC_ADDRESS" >> ../web/.env.tmp && \
+				mv ../web/.env.tmp ../web/.env; \
+			else \
+				echo "NEXT_PUBLIC_USDC_ADDRESS=$$MOCK_USDC_ADDRESS" >> ../web/.env; \
+			fi; \
+			echo "✓ Updated ../web/.env with Mock USDC address: $$MOCK_USDC_ADDRESS"; \
+		fi; \
 		echo ""; \
 		echo "==========================================";\
 		echo "Deployed Contract:"; \

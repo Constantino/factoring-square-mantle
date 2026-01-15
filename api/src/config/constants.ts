@@ -5,6 +5,7 @@ export const DATABASE_CONNECTION_STRING: string = process.env.DATABASE_CONNECTIO
 export const RPC_URL: string = process.env.RPC_URL || '';
 export const PRIVATE_KEY: string = process.env.PRIVATE_KEY || '';
 export const VAULT_FACTORY_ADDRESS: string = process.env.VAULT_FACTORY_ADDRESS || '';
+export const USDC_ADDRESS: string = process.env.USDC_ADDRESS || '';
 
 // Supabase S3 Configuration
 export const SUPABASE_BUCKET_ENDPOINT: string = process.env.SUPABASE_BUCKET_ENDPOINT || '';

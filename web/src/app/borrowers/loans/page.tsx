@@ -6,8 +6,6 @@ import axios from "axios";
 import { useWallets } from "@privy-io/react-auth";
 import { useWalletAddress } from "@/hooks/use-wallet-address";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { LoansTable } from "@/components/loans-table";
 import { LoanStatsPieChart } from "@/components/loan-stats-pie-chart";
@@ -17,9 +15,8 @@ import { formatCurrency } from "@/lib/format";
 
 export default function LoanDashboardPage() {
     const router = useRouter();
-    const { walletAddress, walletsReady, privyReady } = useWalletAddress();
+    const { walletAddress } = useWalletAddress();
     const { wallets } = useWallets();
-    const [copied, setCopied] = useState(false);
     const [loanRequests, setLoanRequests] = useState<LoanRequestWithVault[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -35,6 +32,7 @@ export default function LoanDashboardPage() {
             setLoanRequests([]);
             setLoanStats(null);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [walletAddress]);
 
     const fetchLoanRequests = async () => {
@@ -78,17 +76,6 @@ export default function LoanDashboardPage() {
         }
     };
 
-    const handleCopy = async () => {
-        if (!walletAddress) return;
-
-        try {
-            await navigator.clipboard.writeText(walletAddress);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error("Failed to copy:", err);
-        }
-    };
 
     const handleView = (requestId: number) => {
         router.push(`/borrowers/loans/${requestId}`);

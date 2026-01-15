@@ -91,6 +91,12 @@ export function AppSidebar() {
             icon: Wallet,
             roles: ['Admin', 'Lender'],
         },
+        {
+            title: "Faucet",
+            url: "/faucet",
+            icon: Wallet,
+            roles: ['Admin', 'Lender', 'Borrower']
+        }
     ]
 
     // Filter menu items based on current role
