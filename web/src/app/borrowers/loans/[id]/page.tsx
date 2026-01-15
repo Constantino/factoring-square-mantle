@@ -319,6 +319,67 @@ export default function LoanRequestDetailPage() {
                         </div>
                     </div>
 
+                    {/* NFT Information */}
+                    {(loanDetail.token_id || loanDetail.token_uri || loanDetail.token_address) && (
+                        <div>
+                            <h2 className="text-base font-semibold mb-3 text-center">NFT Information</h2>
+                            <div className="border rounded-lg overflow-hidden">
+                                <table className="w-full text-xs">
+                                    <tbody>
+                                        <tr className="border-b hover:bg-muted/30">
+                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                Token ID
+                                            </td>
+                                            <td className="py-2 px-4 text-left font-mono">
+                                                {loanDetail.token_id !== null && loanDetail.token_id !== undefined ? `#${loanDetail.token_id}` : '-'}
+                                            </td>
+                                        </tr>
+                                        <tr className="border-b hover:bg-muted/30">
+                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                Token Address
+                                            </td>
+                                            <td className="py-2 px-4 text-left">
+                                                {loanDetail.token_address ? (
+                                                    <a
+                                                        href={`https://sepolia.mantlescan.xyz/address/${loanDetail.token_address}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
+                                                    >
+                                                        {loanDetail.token_address}
+                                                        <ExternalLink className="h-2.5 w-2.5" />
+                                                    </a>
+                                                ) : (
+                                                    '-'
+                                                )}
+                                            </td>
+                                        </tr>
+                                        <tr className="hover:bg-muted/30">
+                                            <td className="py-2 px-4 text-left font-medium text-muted-foreground bg-muted/50 w-48">
+                                                Token URI
+                                            </td>
+                                            <td className="py-2 px-4 text-left">
+                                                {loanDetail.token_uri ? (
+                                                    <a
+                                                        href={loanDetail.token_uri}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 break-all"
+                                                    >
+                                                        {loanDetail.token_uri}
+                                                        <ExternalLink className="h-2.5 w-2.5 flex-shrink-0" />
+                                                    </a>
+                                                ) : (
+                                                    '-'
+                                                )}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     {loanDetail.vaults && loanDetail.vaults.length > 0 && (
                         <>
                             {/* Vault Information */}

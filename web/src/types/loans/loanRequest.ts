@@ -13,6 +13,9 @@ export interface LoanRequest {
     not_pledged: boolean;
     borrower_address: string;
     invoice_file_url?: string;
+    token_id?: number;
+    token_uri?: string;
+    token_address?: string;
     created_at: string;
     modified_at: string;
     status: string;
