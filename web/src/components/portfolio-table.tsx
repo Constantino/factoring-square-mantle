@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LenderPortfolio } from "@/types/vault";
@@ -25,7 +26,7 @@ export function PortfolioTable({
             whileHover={undefined}
         >
             <CardHeader>
-                <CardTitle className="text-base">Portfolio</CardTitle>
+                <CardTitle className="text-base">History</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -86,7 +87,12 @@ export function PortfolioTable({
                                 portfolio.map((item) => (
                                     <tr key={item.lender_id} className="border-b border-border hover:bg-muted/50 transition-colors">
                                         <td className="py-3 px-4 text-xs text-foreground">
-                                            {item.vault_name}
+                                            <Link
+                                                href={`/borrowers/loans/${item.loan_request_id}`}
+                                                className="text-blue-500 hover:text-blue-700 hover:underline"
+                                            >
+                                                {item.vault_name}
+                                            </Link>
                                         </td>
                                         <td className="py-3 px-4 text-xs text-foreground font-mono">
                                             {truncateAddress(item.vault_address)}

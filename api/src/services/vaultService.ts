@@ -454,6 +454,7 @@ export class VaultService {
                 v.funded_at,
                 v.fund_release_tx_hash,
                 v.fund_release_at,
+                v.loan_request_id,
                 lr.invoice_due_date as maturity_date,
                 lr.monthly_interest_rate
             FROM "VaultLenders" vl

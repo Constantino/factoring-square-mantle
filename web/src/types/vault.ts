@@ -29,6 +29,7 @@ export interface LenderPortfolio {
     funded_at: string | null;
     fund_release_tx_hash: string | null;
     fund_release_at?: string | null;
+    loan_request_id: number;
     maturity_date?: string | null;
     monthly_interest_rate?: number | null;
     lender_status: 'FUNDED' | 'REDEEMED';
