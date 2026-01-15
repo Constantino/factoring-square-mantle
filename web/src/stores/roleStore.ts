@@ -11,7 +11,7 @@ interface RoleState {
 export const useRoleStore = create<RoleState>()(
     persist(
         (set) => ({
-            currentRole: 'Admin',
+            currentRole: 'Borrower',
             setRole: (role) => set({ currentRole: role }),
         }),
         {
