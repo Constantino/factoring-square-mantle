@@ -5,6 +5,7 @@ export const DATABASE_CONNECTION_STRING: string = process.env.DATABASE_CONNECTIO
 export const RPC_URL: string = process.env.RPC_URL || '';
 export const PRIVATE_KEY: string = process.env.PRIVATE_KEY || '';
 export const VAULT_FACTORY_ADDRESS: string = process.env.VAULT_FACTORY_ADDRESS || '';
+export const TREASURY_ADDRESS: string = process.env.TREASURY_ADDRESS || '';
 export const EXPLORER_URL_BASE: string = process.env.EXPLORER_URL_BASE || 'https://sepolia.mantlescan.xyz';
 
 // Supabase S3 Configuration

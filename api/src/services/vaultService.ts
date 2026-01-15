@@ -27,13 +27,17 @@ export class VaultService {
             // Convert invoice amount to wei (assuming USDC with 6 decimals)
             const maxCapacity = ethers.parseUnits(vaultData.invoiceAmount.toString(), 6);
 
-            // Deploy vault
+            // Get the latest nonce to avoid nonce conflicts
+            const nonce = await this.provider.getTransactionCount(this.wallet.address, 'pending');
+
+            // Deploy vault with explicit nonce
             const tx = await this.vaultFactory.deployVault(
                 vaultData.invoiceName,
                 vaultData.invoiceNumber,
                 vaultData.borrowerAddress,
                 maxCapacity,
-                vaultData.maturityDate
+                vaultData.maturityDate,
+                { nonce }
             );
 
             const receipt = await tx.wait();
@@ -219,7 +223,7 @@ export class VaultService {
     private calculateNewStatus(currentStatus: VaultStatus, currentCapacity: number, newCapacity: number, maxCapacity: number): VaultStatus {
         // Use epsilon for floating point comparison
         const EPSILON = 0.000001; // 1e-6
-        
+
         // Update status based on capacity
         if (currentStatus === VaultStatus.PENDING && newCapacity > 0) {
             return VaultStatus.FUNDING;
@@ -313,7 +317,7 @@ export class VaultService {
             const currentCapacity = parseFloat(vault.current_capacity);
             const maxCapacity = parseFloat(vault.max_capacity);
             const newCapacity = currentCapacity + depositData.amount;
-            
+
             // Use epsilon for floating point comparison (handles 0.8 == 0.8 precision issues)
             const EPSILON = 0.000001; // 1e-6
             const isFullyFunded = (newCapacity + EPSILON) >= maxCapacity;
@@ -341,15 +345,15 @@ export class VaultService {
                 try {
                     console.log('⚠️ No shares_amount provided by frontend, calculating from blockchain...');
                     const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, this.provider);
-                    
+
                     // CRITICAL: Use previewDeposit to get shares for THIS SPECIFIC deposit amount
                     // NOT total balance (which would be wrong for split deposits)
                     const depositInWei = ethers.parseUnits(depositData.amount.toString(), 6);
                     const expectedShares = await vaultContract.previewDeposit(depositInWei);
                     const shareBalanceStr = ethers.formatUnits(expectedShares, 18);
-                    
+
                     console.log(`Calculated shares for deposit ${depositData.amount} USDC: ${shareBalanceStr}`);
-                    
+
                     // Update VaultLenders record with calculated shares as string
                     const updateSharesQuery = `
                         UPDATE "VaultLenders"
@@ -377,13 +381,13 @@ export class VaultService {
                     const vaultContract = new ethers.Contract(vaultAddress, VAULT_ABI, this.provider);
                     const totalAssets = await vaultContract.totalAssets();
                     const totalAssetsUsdc = parseFloat(ethers.formatUnits(totalAssets, 6));
-                    
+
                     console.log(`Smart contract state: totalAssets=${totalAssetsUsdc} USDC, maxCapacity=${maxCapacity} USDC`);
-                    
+
                     // Use epsilon for floating point comparison (handles precision issues)
                     const EPSILON = 0.000001; // 1e-6
                     const isContractFullyFunded = (totalAssetsUsdc + EPSILON) >= maxCapacity;
-                    
+
                     // Only release if smart contract confirms it's fully funded
                     if (isContractFullyFunded) {
                         releaseTxHash = await this.releaseFundsToContract(vaultAddress);
@@ -699,7 +703,7 @@ export class VaultService {
             // Step 3: If lenderId is provided, update specific VaultLenders record
             if (redemptionData.lenderId) {
                 console.log(`📝 Updating VaultLenders record ${redemptionData.lenderId} to REDEEMED status...`);
-                
+
                 const updateLenderQuery = `
                     UPDATE "VaultLenders"
                     SET status = 'REDEEMED',
@@ -709,7 +713,7 @@ export class VaultService {
                         redeemed_at = NOW()
                     WHERE lender_id = $4 AND vault_id = $5
                 `;
-                
+
                 await pool.query(updateLenderQuery, [
                     redemptionData.amount,
                     redemptionData.sharesRedeemed || null,
@@ -717,7 +721,7 @@ export class VaultService {
                     redemptionData.lenderId,
                     vault.vault_id
                 ]);
-                
+
                 console.log(`✅ VaultLenders record ${redemptionData.lenderId} updated successfully`);
             }
 

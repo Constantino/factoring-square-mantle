@@ -10,6 +10,8 @@ import { LoanStatus } from '../types/loanStatus';
 import { uploadFileToSupabase } from '../services/fileUploadService';
 import { MulterRequest } from '../types/multer';
 import { invoiceNftService } from '../services/invoiceNftService';
+import { TREASURY_ADDRESS } from '../config/constants';
+import { validateTreasuryAddress } from '../validators/nftValidator';
 
 const saveLoanRequest = async (params: LoanRequestBody & { invoice_file_url?: string | null }): Promise<LoanRequest> => {
     const query = `
@@ -473,6 +475,15 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
             return;
         }
 
+        // Validate TREASURY_ADDRESS is configured
+        const treasuryAddressError = validateTreasuryAddress();
+        if (treasuryAddressError) {
+            res.status(500).json({
+                error: treasuryAddressError
+            });
+            return;
+        }
+
         // Mint invoice NFT
         const borrowerName = loanRequest.legal_business_name || loanRequest.customer_name;
         const nftMetadata = {
@@ -485,7 +496,11 @@ export const approveLoanRequest = async (req: Request, res: Response): Promise<v
 
         let nftResult;
         try {
-            nftResult = await invoiceNftService.mintInvoiceNFT(nftMetadata, loanRequest.borrower_address);
+            nftResult = await invoiceNftService.mintInvoiceNFT(nftMetadata, TREASURY_ADDRESS);
+
+            // Small delay to ensure network has updated nonce after NFT mint
+            // This helps prevent nonce conflicts when creating the vault
+            await new Promise(resolve => setTimeout(resolve, 2000));
         } catch (error) {
             console.error('Error minting invoice NFT:', error);
             res.status(500).json({

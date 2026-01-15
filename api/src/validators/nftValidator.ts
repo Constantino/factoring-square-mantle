@@ -1,5 +1,5 @@
 import { GenerateInvoiceMetadataBody, InvoiceMetadata, MintInvoiceNFTBody } from '../types/nft';
-import { INVOICE_NFT_ADDRESS } from '../config/constants';
+import { INVOICE_NFT_ADDRESS, TREASURY_ADDRESS } from '../config/constants';
 import { validateWalletAddress } from './walletAddressValidator';
 
 export const validateName = (name: unknown): string | null => {
@@ -165,6 +165,18 @@ export const validateInvoiceNftAddress = (): string | null => {
  */
 export const validateRecipientAddress = (recipientAddress: unknown): string | null => {
     return validateWalletAddress(recipientAddress);
+};
+
+/**
+ * Validates that the TREASURY_ADDRESS constant is configured and is a valid Ethereum address
+ * @returns Error message string if validation fails, null if valid
+ */
+export const validateTreasuryAddress = (): string | null => {
+    if (!TREASURY_ADDRESS || TREASURY_ADDRESS.trim().length === 0) {
+        return 'TREASURY_ADDRESS is not configured. Please set it in your environment variables.';
+    }
+
+    return validateWalletAddress(TREASURY_ADDRESS);
 };
 
 // Type for validation where all fields are unknown (before validation)
